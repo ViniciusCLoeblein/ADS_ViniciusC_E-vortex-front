@@ -1,0 +1,18 @@
+{
+  "editor.tabSize": 2,
+  "files.eol": "\r\n",
+  "workbench.colorCustomizations": {
+    "activityBar.background": "#0091ff",
+    "titleBar.activeBackground": "#0091ff",
+    "titleBar.inactiveBackground": "#0091ff",
+    "titleBar.activeForeground": "#ffffff"
+  },
+  "eslint.format.enable": true,
+  "[typescriptreact]": {
+      "editor.defaultFormatter": "dbaeumer.vscode-eslint"
+  },
+  "editor.formatOnSave": true,
+  "[typescript]": {
+      "editor.defaultFormatter": "dbaeumer.vscode-eslint"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "extends": [
+    "@rocketseat/eslint-config/react"
+  ],
+  "rules": {
+    "@typescript-eslint/no-duplicate-enum-values": "off",
+    "react/no-unescaped-entities": "off"
+  }
+}

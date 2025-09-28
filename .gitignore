@@ -1,24 +1,60 @@
-# Nestjs specific
-/dist
-/node_modules
-/build
-/tmp
+# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
 
-# Logs
-logs
-*.log
-npm-debug.log*
-pnpm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
+# dependencies
+node_modules/
+yarn.lock
+package-lock.json
 
-# dotenv environment variable files
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native
+*.orig.*
+*.jks
+*.keystore
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# local env files
+.env*.local
 .env
-.env.development
-.env.test
-.env.production
 
-# temp directory
-.temp
-.tmp
+# typescript
+*.tsbuildinfo
+
+app-example
+
+# builds 
+android/
+ios/
+
+# google
+firebase-credentials.json
+google-services.json
+GoogleService-Info.plist
+
+.expo-shared
+
+# builds
+*.apk
+*.aab
+*.ipa
+output_folder/

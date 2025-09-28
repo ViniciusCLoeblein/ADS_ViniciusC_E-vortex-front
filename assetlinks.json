@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.evortex",
+      "sha256_cert_fingerprints": [
+        "A2:2F:AB:79:F1:EA:4C:6D:90:B5:2A:DF:D3:1D:34:1F:00:E2:BB:26:4A:8E:B2:1B:FD:5D:13:E0:DA:7D:B0:9D"
+      ]
+    }
+  }
+] 

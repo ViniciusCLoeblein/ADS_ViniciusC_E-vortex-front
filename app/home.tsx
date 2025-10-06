@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { router } from 'expo-router'
+import { useCart } from '@/contexts/CartContext'
 
 const mockProducts = [
   {
@@ -66,9 +67,23 @@ const categories = [
 export default function HomeScreen() {
   const [searchText, setSearchText] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('1')
+  const { addToCart, getTotalItems } = useCart()
 
   const handleLogout = () => {
     router.replace('/login')
+  }
+
+  const handleAddToCart = (product: (typeof mockProducts)[0]) => {
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      originalPrice: product.originalPrice,
+      image: product.image,
+      rating: product.rating,
+      reviews: product.reviews,
+      discount: product.discount,
+    })
   }
 
   const renderProduct = ({ item }: { item: (typeof mockProducts)[0] }) => (
@@ -110,7 +125,10 @@ export default function HomeScreen() {
             {item.originalPrice}
           </Text>
         </View>
-        <TouchableOpacity className="bg-frgprimary rounded-lg p-2">
+        <TouchableOpacity
+          className="bg-frgprimary rounded-lg p-2"
+          onPress={() => handleAddToCart(item)}
+        >
           <Ionicons name="add" size={16} color="white" />
         </TouchableOpacity>
       </View>
@@ -155,8 +173,15 @@ export default function HomeScreen() {
                 color="#9FABB9"
               />
             </TouchableOpacity>
-            <TouchableOpacity className="bg-gray-100 rounded-full p-2">
+            <TouchableOpacity className="bg-gray-100 rounded-full p-2 relative">
               <Ionicons name="cart-outline" size={20} color="#9FABB9" />
+              {getTotalItems() > 0 && (
+                <View className="absolute -top-1 -right-1 bg-red-500 rounded-full w-5 h-5 items-center justify-center">
+                  <Text className="text-white text-xs font-bold">
+                    {getTotalItems() > 99 ? '99+' : getTotalItems()}
+                  </Text>
+                </View>
+              )}
             </TouchableOpacity>
             <TouchableOpacity
               onPress={handleLogout}

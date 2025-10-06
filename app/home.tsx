@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { router } from 'expo-router'
 import { useCart } from '@/contexts/CartContext'
+import { useMannequin } from '@/contexts/MannequinContext'
 
 const mockProducts = [
   {
@@ -23,6 +24,8 @@ const mockProducts = [
     rating: 4.8,
     reviews: 124,
     discount: '14%',
+    category: 'Eletrônicos',
+    isEquippable: false,
   },
   {
     id: '2',
@@ -33,6 +36,8 @@ const mockProducts = [
     rating: 4.6,
     reviews: 89,
     discount: '25%',
+    category: 'Eletrônicos',
+    isEquippable: false,
   },
   {
     id: '3',
@@ -43,6 +48,8 @@ const mockProducts = [
     rating: 4.9,
     reviews: 67,
     discount: '17%',
+    category: 'Eletrônicos',
+    isEquippable: false,
   },
   {
     id: '4',
@@ -53,6 +60,60 @@ const mockProducts = [
     rating: 4.7,
     reviews: 203,
     discount: '19%',
+    category: 'Eletrônicos',
+    isEquippable: false,
+  },
+  {
+    id: '5',
+    name: 'Camiseta Premium',
+    price: 'R$ 89,00',
+    originalPrice: 'R$ 129,00',
+    image: 'https://via.placeholder.com/200x200/FF6B6B/FFFFFF?text=Camiseta',
+    rating: 4.5,
+    reviews: 156,
+    discount: '31%',
+    category: 'Moda',
+    isEquippable: true,
+    equipSlot: 'torso',
+  },
+  {
+    id: '6',
+    name: 'Óculos de Sol',
+    price: 'R$ 199,00',
+    originalPrice: 'R$ 299,00',
+    image: 'https://via.placeholder.com/200x200/4ECDC4/FFFFFF?text=Óculos',
+    rating: 4.8,
+    reviews: 89,
+    discount: '33%',
+    category: 'Moda',
+    isEquippable: true,
+    equipSlot: 'face',
+  },
+  {
+    id: '7',
+    name: 'Tênis Esportivo',
+    price: 'R$ 399,00',
+    originalPrice: 'R$ 599,00',
+    image: 'https://via.placeholder.com/200x200/45B7D1/FFFFFF?text=Tênis',
+    rating: 4.7,
+    reviews: 234,
+    discount: '33%',
+    category: 'Moda',
+    isEquippable: true,
+    equipSlot: 'feet',
+  },
+  {
+    id: '8',
+    name: 'Jaqueta Jeans',
+    price: 'R$ 249,00',
+    originalPrice: 'R$ 349,00',
+    image: 'https://via.placeholder.com/200x200/96CEB4/FFFFFF?text=Jaqueta',
+    rating: 4.6,
+    reviews: 178,
+    discount: '29%',
+    category: 'Moda',
+    isEquippable: true,
+    equipSlot: 'torso',
   },
 ]
 
@@ -68,6 +129,7 @@ export default function HomeScreen() {
   const [searchText, setSearchText] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('1')
   const { addToCart, getTotalItems } = useCart()
+  const {} = useMannequin()
 
   const handleLogout = () => {
     router.replace('/login')
@@ -86,6 +148,12 @@ export default function HomeScreen() {
     })
   }
 
+  const handleTestItem = (product: (typeof mockProducts)[0]) => {
+    if (product.isEquippable) {
+      router.push('/mannequin')
+    }
+  }
+
   const renderProduct = ({ item }: { item: (typeof mockProducts)[0] }) => (
     <TouchableOpacity className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mr-4 w-48">
       <View className="relative">
@@ -98,6 +166,11 @@ export default function HomeScreen() {
         <View className="absolute top-2 left-2 bg-red-500 px-2 py-1 rounded-lg">
           <Text className="text-white text-xs font-bold">-{item.discount}</Text>
         </View>
+        {item.isEquippable && (
+          <View className="absolute top-2 right-12 bg-blue-500 px-2 py-1 rounded-lg">
+            <Text className="text-white text-xs font-bold">Teste</Text>
+          </View>
+        )}
         <TouchableOpacity className="absolute top-2 right-2 bg-white rounded-full p-2 shadow-sm">
           <Ionicons name="heart-outline" size={16} color="#EF4058" />
         </TouchableOpacity>
@@ -125,12 +198,22 @@ export default function HomeScreen() {
             {item.originalPrice}
           </Text>
         </View>
-        <TouchableOpacity
-          className="bg-frgprimary rounded-lg p-2"
-          onPress={() => handleAddToCart(item)}
-        >
-          <Ionicons name="add" size={16} color="white" />
-        </TouchableOpacity>
+        <View className="flex-row space-x-2">
+          {item.isEquippable && (
+            <TouchableOpacity
+              className="bg-blue-500 rounded-lg p-2"
+              onPress={() => handleTestItem(item)}
+            >
+              <Ionicons name="eye-outline" size={16} color="white" />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            className="bg-frgprimary rounded-lg p-2"
+            onPress={() => handleAddToCart(item)}
+          >
+            <Ionicons name="add" size={16} color="white" />
+          </TouchableOpacity>
+        </View>
       </View>
     </TouchableOpacity>
   )
@@ -166,6 +249,12 @@ export default function HomeScreen() {
             <Text className="text-system-text">Bem-vindo de volta!</Text>
           </View>
           <View className="flex-row items-center space-x-3">
+            <TouchableOpacity
+              className="bg-gray-100 rounded-full p-2"
+              onPress={() => router.push('/mannequin')}
+            >
+              <Ionicons name="person-outline" size={20} color="#9FABB9" />
+            </TouchableOpacity>
             <TouchableOpacity className="bg-gray-100 rounded-full p-2">
               <Ionicons
                 name="notifications-outline"

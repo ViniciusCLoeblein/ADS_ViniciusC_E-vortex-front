@@ -81,6 +81,7 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-native": "0.81.4",
+    "react-native-3d-model-view": "^1.2.0",
     "react-native-barcode-svg": "^0.0.15",
     "react-native-calendars": "^1.1313.0",
     "react-native-circular-progress": "^1.4.1",

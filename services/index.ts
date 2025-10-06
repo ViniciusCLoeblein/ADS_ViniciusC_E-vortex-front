@@ -61,7 +61,7 @@ instance.interceptors.response.use(
       toast.error('Ocorreu um erro!', msgToast)
     }
 
-    return Promise.reject(new Error(msgError, { cause: { message: msgError } }))
+    return Promise.reject(new Error(msgError))
   },
 )
 

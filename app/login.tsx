@@ -11,13 +11,18 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router } from 'expo-router'
+import { useMutation } from '@tanstack/react-query'
+import { login } from '@/services/auth'
 import { Ionicons } from '@expo/vector-icons'
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
+
+  const { mutateAsync: mutateLogin, isPending } = useMutation({
+    mutationFn: login,
+  })
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -30,16 +35,11 @@ export default function LoginScreen() {
       return
     }
 
-    setIsLoading(true)
-
     try {
-      await new Promise<void>((resolve) => setTimeout(resolve, 1500))
-
+      await mutateLogin({ email, senha: password })
       router.replace('/home')
     } catch (error) {
       Alert.alert('Erro', 'Falha no login. Tente novamente.')
-    } finally {
-      setIsLoading(false)
     }
   }
 
@@ -123,13 +123,13 @@ export default function LoginScreen() {
 
               <TouchableOpacity
                 className={`bg-frgprimary rounded-xl py-4 ${
-                  isLoading ? 'opacity-70' : ''
+                  isPending ? 'opacity-70' : ''
                 }`}
                 onPress={handleLogin}
-                disabled={isLoading}
+                disabled={isPending}
               >
                 <Text className="text-white text-center text-lg font-semibold">
-                  {isLoading ? 'Entrando...' : 'Entrar'}
+                  {isPending ? 'Entrando...' : 'Entrar'}
                 </Text>
               </TouchableOpacity>
 
@@ -137,22 +137,6 @@ export default function LoginScreen() {
                 <View className="flex-1 h-px bg-gray-200" />
                 <Text className="mx-4 text-system-text">ou</Text>
                 <View className="flex-1 h-px bg-gray-200" />
-              </View>
-
-              <View className="space-y-3">
-                <TouchableOpacity className="bg-white border border-gray-200 rounded-xl py-4 flex-row items-center justify-center">
-                  <Ionicons name="logo-google" size={20} color="#DB4437" />
-                  <Text className="text-frg900 font-medium ml-3">
-                    Continuar com Google
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity className="bg-white border border-gray-200 rounded-xl py-4 flex-row items-center justify-center">
-                  <Ionicons name="logo-apple" size={20} color="#000" />
-                  <Text className="text-frg900 font-medium ml-3">
-                    Continuar com Apple
-                  </Text>
-                </TouchableOpacity>
               </View>
             </View>
 

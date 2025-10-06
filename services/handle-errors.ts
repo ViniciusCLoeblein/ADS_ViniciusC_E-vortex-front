@@ -6,18 +6,14 @@ export const handleUnauthorizedError = (
   error: AxiosError<ApiErrorResponse>,
 ): string => {
   const url = error?.response?.config?.url
-  const urlIgnore = [
-    '/auth/token',
-    '/auth/verify-two-factor-code',
-    '/auth/verify-already-customer',
-  ]
+  const urlIgnore = ['/auth/login']
 
   const message = Array.isArray(error?.response?.data?.message)
     ? error.response.data.message.join(' | ')
     : (error?.response?.data?.message ?? 'Não autorizado!')
 
   const msg =
-    error?.response?.data?.path === '/auth/token'
+    error?.response?.data?.path === '/auth/login'
       ? message
       : 'Sua sessão expirou, faça login novamente!'
 

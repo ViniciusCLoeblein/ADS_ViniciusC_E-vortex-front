@@ -173,7 +173,10 @@ export default function HomeScreen() {
                 color="#9FABB9"
               />
             </TouchableOpacity>
-            <TouchableOpacity className="bg-gray-100 rounded-full p-2 relative">
+            <TouchableOpacity
+              className="bg-gray-100 rounded-full p-2 relative"
+              onPress={() => router.push('/cart')}
+            >
               <Ionicons name="cart-outline" size={20} color="#9FABB9" />
               {getTotalItems() > 0 && (
                 <View className="absolute -top-1 -right-1 bg-red-500 rounded-full w-5 h-5 items-center justify-center">

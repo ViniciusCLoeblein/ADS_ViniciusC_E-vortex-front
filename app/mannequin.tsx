@@ -21,7 +21,8 @@ const equippableItems = [
     name: 'Camiseta Premium',
     price: 'R$ 89,00',
     originalPrice: 'R$ 129,00',
-    image: 'https://via.placeholder.com/200x200/FF6B6B/FFFFFF?text=Camiseta',
+    image:
+      'https://w7.pngwing.com/pngs/33/974/png-transparent-t-shirts-t-shirts-mens-white.png',
     rating: 4.5,
     reviews: 156,
     discount: '31%',
@@ -34,7 +35,8 @@ const equippableItems = [
     name: 'Óculos de Sol',
     price: 'R$ 199,00',
     originalPrice: 'R$ 299,00',
-    image: 'https://via.placeholder.com/200x200/4ECDC4/FFFFFF?text=Óculos',
+    image:
+      'https://www.pikpng.com/pngl/m/457-4576142_oculos-de-sol-png-oculos-escuro-em-png.png',
     rating: 4.8,
     reviews: 89,
     discount: '33%',

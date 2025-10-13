@@ -143,7 +143,11 @@ export default function LoginScreen() {
             <View className="mt-8 items-center">
               <Text className="text-system-text">
                 Não tem uma conta?{' '}
-                <Text className="text-frgprimary font-medium">Cadastre-se</Text>
+                <TouchableOpacity onPress={() => router.push('/register')}>
+                  <Text className="text-frgprimary font-medium">
+                    Cadastre-se
+                  </Text>
+                </TouchableOpacity>
               </Text>
             </View>
           </View>

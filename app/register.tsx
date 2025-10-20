@@ -8,11 +8,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Switch,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { router } from 'expo-router'
+import { Link, router } from 'expo-router'
 import { Ionicons } from '@expo/vector-icons'
-import { useMutation } from '@tanstack/react-query'
 import {
   formatCPF,
   formatCNPJ,
@@ -20,24 +20,16 @@ import {
   formatDate,
   validateCustomerForm,
   validateSellerForm,
-  removeNonNumeric,
   type CustomerFormData,
   type SellerFormData,
 } from '@/lib/utils'
-import {
-  registerCustomer as registerCustomerAPI,
-  registerSeller as registerSellerAPI,
-} from '@/services/auth'
-import type {
-  RegisterCustomerReq,
-  RegisterSellerReq,
-} from '@/services/auth/interface'
 
 export default function RegisterScreen() {
   const [activeTab, setActiveTab] = useState<'customer' | 'seller'>('customer')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
+  // Customer form state
   const [customerForm, setCustomerForm] = useState<CustomerFormData>({
     name: '',
     email: '',
@@ -49,6 +41,7 @@ export default function RegisterScreen() {
     acceptMarketing: false,
   })
 
+  // Seller form state
   const [sellerForm, setSellerForm] = useState<SellerFormData>({
     name: '',
     email: '',
@@ -60,44 +53,10 @@ export default function RegisterScreen() {
     companyName: '',
     tradeName: '',
     stateRegistration: '',
-    bankAccount: {
-      bank: '',
-      agency: '',
-      account: '',
-    },
   })
 
-  const { mutate: mutateCustomerRegister, isPending: isCustomerPending } =
-    useMutation({
-      mutationFn: registerCustomerAPI,
-      onSuccess: () => {
-        Alert.alert('Sucesso', 'Cliente registrado com sucesso!', [
-          { text: 'OK', onPress: () => router.replace('/login') },
-        ])
-      },
-      onError: (error) => {
-        Alert.alert(
-          'Erro',
-          error.message || 'Falha no registro. Tente novamente.',
-        )
-      },
-    })
-
-  const { mutate: mutateSellerRegister, isPending: isSellerPending } =
-    useMutation({
-      mutationFn: registerSellerAPI,
-      onSuccess: () => {
-        Alert.alert('Sucesso', 'Vendedor registrado com sucesso!', [
-          { text: 'OK', onPress: () => router.replace('/login') },
-        ])
-      },
-      onError: (error) => {
-        Alert.alert(
-          'Erro',
-          error.message || 'Falha no registro. Tente novamente.',
-        )
-      },
-    })
+  const [isCustomerPending, setIsCustomerPending] = useState(false)
+  const [isSellerPending, setIsSellerPending] = useState(false)
 
   const handleCustomerValidation = () => {
     const validation = validateCustomerForm(customerForm)
@@ -121,56 +80,49 @@ export default function RegisterScreen() {
     return true
   }
 
-  const handleCustomerRegister = () => {
+  const handleCustomerRegister = async () => {
     if (handleCustomerValidation()) {
-      // Formatar data para YYYY-MM-DD
-      const [day, month, year] = customerForm.birthDate.split('/')
-      const formattedDate = `${year}-${month}-${day}`
+      setIsCustomerPending(true)
 
-      const data: RegisterCustomerReq = {
-        nome: customerForm.name,
-        email: customerForm.email,
-        senha: customerForm.password,
-        cpf: removeNonNumeric(customerForm.cpf),
-        tipo: 'cliente',
-        telefone: removeNonNumeric(customerForm.phone),
-        dataNascimento: formattedDate,
-        aceitaMarketing: customerForm.acceptMarketing,
-      }
-
-      mutateCustomerRegister(data)
+      // Simular chamada de API
+      setTimeout(() => {
+        setIsCustomerPending(false)
+        Alert.alert('Sucesso', 'Cliente registrado com sucesso!', [
+          {
+            text: 'OK',
+            onPress: () => {
+              try {
+                router.replace('/login')
+              } catch (error) {
+                console.log('Navigation error:', error)
+              }
+            },
+          },
+        ])
+      }, 2000)
     }
   }
 
-  const handleSellerRegister = () => {
+  const handleSellerRegister = async () => {
     if (handleSellerValidation()) {
-      const data: RegisterSellerReq = {
-        nome: sellerForm.name,
-        email: sellerForm.email,
-        senha: sellerForm.password,
-        cpf: removeNonNumeric(sellerForm.cpf),
-        telefone: removeNonNumeric(sellerForm.phone),
-        cnpj: removeNonNumeric(sellerForm.cnpj),
-        razaoSocial: sellerForm.companyName,
-        nomeFantasia: sellerForm.tradeName,
-        inscricaoEstadual: sellerForm.stateRegistration,
-      }
+      setIsSellerPending(true)
 
-      // Adicionar conta bancária se fornecida
-      if (
-        sellerForm.bankAccount &&
-        sellerForm.bankAccount.bank &&
-        sellerForm.bankAccount.agency &&
-        sellerForm.bankAccount.account
-      ) {
-        data.contaBancaria = {
-          banco: sellerForm.bankAccount.bank,
-          agencia: sellerForm.bankAccount.agency,
-          conta: sellerForm.bankAccount.account,
-        }
-      }
-
-      mutateSellerRegister(data)
+      // Simular chamada de API
+      setTimeout(() => {
+        setIsSellerPending(false)
+        Alert.alert('Sucesso', 'Vendedor registrado com sucesso!', [
+          {
+            text: 'OK',
+            onPress: () => {
+              try {
+                router.replace('/login')
+              } catch (error) {
+                console.log('Navigation error:', error)
+              }
+            },
+          },
+        ])
+      }, 2000)
     }
   }
 
@@ -314,30 +266,20 @@ export default function RegisterScreen() {
         </View>
       </View>
 
-      <TouchableOpacity
-        className="flex-row items-center py-2"
-        onPress={() =>
-          setCustomerForm({
-            ...customerForm,
-            acceptMarketing: !customerForm.acceptMarketing,
-          })
-        }
-      >
-        <View
-          className={`w-6 h-6 rounded border-2 mr-3 items-center justify-center ${
-            customerForm.acceptMarketing
-              ? 'bg-frgprimary border-frgprimary'
-              : 'border-gray-300'
-          }`}
-        >
-          {customerForm.acceptMarketing && (
-            <Ionicons name="checkmark" size={16} color="white" />
-          )}
-        </View>
-        <Text className="text-system-text text-sm flex-1">
-          Aceito receber e-mails com ofertas e novidades
+      <View className="flex-row items-center justify-between mt-4">
+        <Text className="text-frg900 font-medium">
+          Aceito receber marketing
         </Text>
-      </TouchableOpacity>
+        <Switch
+          trackColor={{ false: '#E0E0E0', true: '#437C99' }}
+          thumbColor={customerForm.acceptMarketing ? '#FFFFFF' : '#F4F4F4'}
+          ios_backgroundColor="#E0E0E0"
+          onValueChange={(value) =>
+            setCustomerForm({ ...customerForm, acceptMarketing: value })
+          }
+          value={customerForm.acceptMarketing}
+        />
+      </View>
 
       <TouchableOpacity
         className={`bg-frgprimary rounded-xl py-4 mt-6 ${
@@ -439,7 +381,7 @@ export default function RegisterScreen() {
         <Text className="text-frg900 font-medium mb-2">Razão Social</Text>
         <TextInput
           className="bg-inputbg border border-gray-200 rounded-xl px-4 py-4 text-base"
-          placeholder="Digite a razão social"
+          placeholder="Digite a razão social da empresa"
           placeholderTextColor="#9FABB9"
           value={sellerForm.companyName}
           onChangeText={(text) =>
@@ -452,7 +394,7 @@ export default function RegisterScreen() {
         <Text className="text-frg900 font-medium mb-2">Nome Fantasia</Text>
         <TextInput
           className="bg-inputbg border border-gray-200 rounded-xl px-4 py-4 text-base"
-          placeholder="Digite o nome fantasia"
+          placeholder="Digite o nome fantasia da empresa"
           placeholderTextColor="#9FABB9"
           value={sellerForm.tradeName}
           onChangeText={(text) =>
@@ -489,7 +431,11 @@ export default function RegisterScreen() {
             onChangeText={(text) =>
               setSellerForm({
                 ...sellerForm,
-                bankAccount: { ...sellerForm.bankAccount!, bank: text },
+                bankAccount: {
+                  bank: text,
+                  agency: sellerForm.bankAccount?.agency || '',
+                  account: sellerForm.bankAccount?.account || '',
+                },
               })
             }
           />
@@ -505,7 +451,11 @@ export default function RegisterScreen() {
             onChangeText={(text) =>
               setSellerForm({
                 ...sellerForm,
-                bankAccount: { ...sellerForm.bankAccount!, agency: text },
+                bankAccount: {
+                  bank: sellerForm.bankAccount?.bank || '',
+                  agency: text,
+                  account: sellerForm.bankAccount?.account || '',
+                },
               })
             }
           />
@@ -521,7 +471,11 @@ export default function RegisterScreen() {
             onChangeText={(text) =>
               setSellerForm({
                 ...sellerForm,
-                bankAccount: { ...sellerForm.bankAccount!, account: text },
+                bankAccount: {
+                  bank: sellerForm.bankAccount?.bank || '',
+                  agency: sellerForm.bankAccount?.agency || '',
+                  account: text,
+                },
               })
             }
           />
@@ -609,6 +563,7 @@ export default function RegisterScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View className="flex-1 px-6 pt-8">
+            {/* Header */}
             <View className="items-center mb-8">
               <TouchableOpacity
                 onPress={() => router.back()}
@@ -628,6 +583,7 @@ export default function RegisterScreen() {
               </Text>
             </View>
 
+            {/* Tab Selector */}
             <View className="bg-gray-100 rounded-xl p-1 mb-6">
               <View className="flex-row">
                 <TouchableOpacity
@@ -680,20 +636,20 @@ export default function RegisterScreen() {
               </View>
             </View>
 
+            {/* Form Content */}
             <View className="mb-6">
               {activeTab === 'customer'
                 ? renderCustomerForm()
                 : renderSellerForm()}
             </View>
 
+            {/* Footer */}
             <View className="mt-8 mb-8 items-center">
               <Text className="text-system-text">
                 Já tem uma conta?{' '}
-                <TouchableOpacity onPress={() => router.back()}>
-                  <Text className="text-frgprimary font-medium">
-                    Fazer Login
-                  </Text>
-                </TouchableOpacity>
+                <Link className="text-frgprimary font-medium" href="/login">
+                  Fazer Login
+                </Link>
               </Text>
             </View>
           </View>

@@ -9,8 +9,6 @@ import Toast from 'react-native-toast-message'
 import { useFonts } from 'expo-font'
 import * as Notifications from 'expo-notifications'
 import { SystemBars } from 'react-native-edge-to-edge'
-import { CartProvider } from '@/contexts/CartContext'
-import { MannequinProvider } from '@/contexts/MannequinContext'
 
 SplashScreen.preventAutoHideAsync()
 
@@ -71,34 +69,24 @@ export default function RootLayout() {
       <SystemBars style="dark" />
       <QueryClientProvider client={queryClient}>
         <SafeAreaProvider>
-          <CartProvider>
-            <MannequinProvider>
-              <Stack
-                screenOptions={{
-                  animation: 'fade',
-                }}
-              >
-                <Stack.Screen name="index" options={{ headerShown: false }} />
-                <Stack.Screen name="login" options={{ headerShown: false }} />
-                <Stack.Screen
-                  name="register"
-                  options={{ headerShown: false }}
-                />
-                <Stack.Screen name="home" options={{ headerShown: false }} />
-                <Stack.Screen name="cart" options={{ headerShown: false }} />
-                <Stack.Screen
-                  name="mannequin"
-                  options={{ headerShown: false }}
-                />
-                <Stack.Screen
-                  name="+not-found"
-                  options={{
-                    freezeOnBlur: false,
-                  }}
-                />
-              </Stack>
-            </MannequinProvider>
-          </CartProvider>
+          <Stack
+            screenOptions={{
+              animation: 'fade',
+            }}
+          >
+            <Stack.Screen name="index" options={{ headerShown: false }} />
+            <Stack.Screen name="login" options={{ headerShown: false }} />
+            <Stack.Screen name="register" options={{ headerShown: false }} />
+            <Stack.Screen name="home" options={{ headerShown: false }} />
+            <Stack.Screen name="cart" options={{ headerShown: false }} />
+            <Stack.Screen name="mannequin" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="+not-found"
+              options={{
+                freezeOnBlur: false,
+              }}
+            />
+          </Stack>
         </SafeAreaProvider>
       </QueryClientProvider>
       <Toast position="top" topOffset={50} autoHide visibilityTime={5000} />

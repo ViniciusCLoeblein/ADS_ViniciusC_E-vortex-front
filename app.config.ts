@@ -36,14 +36,6 @@ const config: ExpoConfig = {
       'applinks:app.evortex.com.br',
       'applinks:evortex.com.br',
     ],
-    googleServicesFile: './GoogleService-Info.plist',
-    icon: './assets/images/favicon-large.png',
-  },
-  updates: {
-    url: 'https://u.expo.dev/681001f7-1108-46bc-a9ff-cc62de0de5a5',
-    enabled: true,
-    checkAutomatically: 'ON_LOAD',
-    fallbackToCacheTimeout: 0,
   },
   runtimeVersion: {
     policy: 'appVersion',

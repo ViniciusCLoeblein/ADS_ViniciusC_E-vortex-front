@@ -125,17 +125,25 @@ export interface CustomerFormData {
   confirmPassword: string
   birthDate: string
   cpf: string
+  acceptMarketing: boolean
 }
 
 export interface SellerFormData {
-  companyName: string
+  name: string
   email: string
   phone: string
   password: string
   confirmPassword: string
+  cpf: string
   cnpj: string
-  address: string
-  description: string
+  companyName: string
+  tradeName: string
+  stateRegistration: string
+  bankAccount?: {
+    bank: string
+    agency: string
+    account: string
+  }
 }
 
 export interface ValidationResult {
@@ -208,24 +216,32 @@ export const validateSellerForm = (
   const errors: string[] = []
 
   // Campos obrigatórios
-  if (!formData.companyName.trim()) {
-    errors.push('Nome da empresa é obrigatório')
-  }
+  if (!formData.name.trim()) errors.push('Nome é obrigatório')
   if (!formData.email.trim()) errors.push('Email é obrigatório')
   if (!formData.phone.trim()) errors.push('Telefone é obrigatório')
+  if (!formData.cpf.trim()) errors.push('CPF é obrigatório')
   if (!formData.password) errors.push('Senha é obrigatória')
   if (!formData.confirmPassword) {
     errors.push('Confirmação de senha é obrigatória')
   }
   if (!formData.cnpj.trim()) errors.push('CNPJ é obrigatório')
-  if (!formData.address.trim()) errors.push('Endereço é obrigatório')
-  if (!formData.description.trim()) {
-    errors.push('Descrição da empresa é obrigatória')
+  if (!formData.companyName.trim()) {
+    errors.push('Razão social é obrigatória')
+  }
+  if (!formData.tradeName.trim()) {
+    errors.push('Nome fantasia é obrigatório')
+  }
+  if (!formData.stateRegistration.trim()) {
+    errors.push('Inscrição estadual é obrigatória')
   }
 
   // Validações de formato
   if (formData.email && !isValidEmail(formData.email)) {
     errors.push('Email deve ter formato válido')
+  }
+
+  if (formData.cpf && !isValidCPFFormat(formData.cpf)) {
+    errors.push('CPF deve ter 11 dígitos')
   }
 
   if (formData.cnpj && !isValidCNPJFormat(formData.cnpj)) {

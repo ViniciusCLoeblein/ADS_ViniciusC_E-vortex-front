@@ -10,7 +10,7 @@ import {
   ScrollView,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { router } from 'expo-router'
+import { router, Link } from 'expo-router'
 import { useMutation } from '@tanstack/react-query'
 import { login } from '@/services/auth'
 import { Ionicons } from '@expo/vector-icons'
@@ -89,7 +89,7 @@ export default function LoginScreen() {
                 </View>
               </View>
 
-              <View>
+              <View className="mt-1">
                 <Text className="text-frg900 font-medium mb-2">Senha</Text>
                 <View className="relative">
                   <TextInput
@@ -115,14 +115,8 @@ export default function LoginScreen() {
                 </View>
               </View>
 
-              <TouchableOpacity className="self-end">
-                <Text className="text-frgprimary font-medium">
-                  Esqueceu a senha?
-                </Text>
-              </TouchableOpacity>
-
               <TouchableOpacity
-                className={`bg-frgprimary rounded-xl py-4 ${
+                className={`bg-frgprimary rounded-xl py-4 mt-4 ${
                   isPending ? 'opacity-70' : ''
                 }`}
                 onPress={handleLogin}
@@ -133,21 +127,19 @@ export default function LoginScreen() {
                 </Text>
               </TouchableOpacity>
 
-              <View className="flex-row items-center my-6">
-                <View className="flex-1 h-px bg-gray-200" />
-                <Text className="mx-4 text-system-text">ou</Text>
-                <View className="flex-1 h-px bg-gray-200" />
-              </View>
+              <TouchableOpacity className="self-end mt-4">
+                <Text className="text-frgprimary font-medium">
+                  Esqueceu a senha?
+                </Text>
+              </TouchableOpacity>
             </View>
 
-            <View className="mt-8 items-center">
+            <View className="flex-row mt-auto mb-8 items-center justify-center">
               <Text className="text-system-text">
                 Não tem uma conta?{' '}
-                <TouchableOpacity onPress={() => router.push('/register')}>
-                  <Text className="text-frgprimary font-medium">
-                    Cadastre-se
-                  </Text>
-                </TouchableOpacity>
+                <Link className="text-frgprimary font-medium" href="/register">
+                  Cadastre-se
+                </Link>
               </Text>
             </View>
           </View>

@@ -20,27 +20,24 @@ import {
   formatDate,
   validateCustomerForm,
   validateSellerForm,
+  removeNonNumeric,
   type CustomerFormData,
   type SellerFormData,
 } from '@/lib/utils'
-
-// Mock API functions
-const registerCustomer = async () => {
-  await new Promise((resolve) => setTimeout(resolve, 1500))
-  return { success: true, message: 'Cliente registrado com sucesso!' }
-}
-
-const registerSeller = async () => {
-  await new Promise((resolve) => setTimeout(resolve, 1500))
-  return { success: true, message: 'Vendedor registrado com sucesso!' }
-}
+import {
+  registerCustomer as registerCustomerAPI,
+  registerSeller as registerSellerAPI,
+} from '@/services/auth'
+import type {
+  RegisterCustomerReq,
+  RegisterSellerReq,
+} from '@/services/auth/interface'
 
 export default function RegisterScreen() {
   const [activeTab, setActiveTab] = useState<'customer' | 'seller'>('customer')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
-  // Customer form state
   const [customerForm, setCustomerForm] = useState<CustomerFormData>({
     name: '',
     email: '',
@@ -49,23 +46,30 @@ export default function RegisterScreen() {
     confirmPassword: '',
     birthDate: '',
     cpf: '',
+    acceptMarketing: false,
   })
 
-  // Seller form state
   const [sellerForm, setSellerForm] = useState<SellerFormData>({
-    companyName: '',
+    name: '',
     email: '',
     phone: '',
     password: '',
     confirmPassword: '',
+    cpf: '',
     cnpj: '',
-    address: '',
-    description: '',
+    companyName: '',
+    tradeName: '',
+    stateRegistration: '',
+    bankAccount: {
+      bank: '',
+      agency: '',
+      account: '',
+    },
   })
 
   const { mutate: mutateCustomerRegister, isPending: isCustomerPending } =
     useMutation({
-      mutationFn: registerCustomer,
+      mutationFn: registerCustomerAPI,
       onSuccess: () => {
         Alert.alert('Sucesso', 'Cliente registrado com sucesso!', [
           { text: 'OK', onPress: () => router.replace('/login') },
@@ -81,7 +85,7 @@ export default function RegisterScreen() {
 
   const { mutate: mutateSellerRegister, isPending: isSellerPending } =
     useMutation({
-      mutationFn: registerSeller,
+      mutationFn: registerSellerAPI,
       onSuccess: () => {
         Alert.alert('Sucesso', 'Vendedor registrado com sucesso!', [
           { text: 'OK', onPress: () => router.replace('/login') },
@@ -119,13 +123,54 @@ export default function RegisterScreen() {
 
   const handleCustomerRegister = () => {
     if (handleCustomerValidation()) {
-      mutateCustomerRegister()
+      // Formatar data para YYYY-MM-DD
+      const [day, month, year] = customerForm.birthDate.split('/')
+      const formattedDate = `${year}-${month}-${day}`
+
+      const data: RegisterCustomerReq = {
+        nome: customerForm.name,
+        email: customerForm.email,
+        senha: customerForm.password,
+        cpf: removeNonNumeric(customerForm.cpf),
+        tipo: 'cliente',
+        telefone: removeNonNumeric(customerForm.phone),
+        dataNascimento: formattedDate,
+        aceitaMarketing: customerForm.acceptMarketing,
+      }
+
+      mutateCustomerRegister(data)
     }
   }
 
   const handleSellerRegister = () => {
     if (handleSellerValidation()) {
-      mutateSellerRegister()
+      const data: RegisterSellerReq = {
+        nome: sellerForm.name,
+        email: sellerForm.email,
+        senha: sellerForm.password,
+        cpf: removeNonNumeric(sellerForm.cpf),
+        telefone: removeNonNumeric(sellerForm.phone),
+        cnpj: removeNonNumeric(sellerForm.cnpj),
+        razaoSocial: sellerForm.companyName,
+        nomeFantasia: sellerForm.tradeName,
+        inscricaoEstadual: sellerForm.stateRegistration,
+      }
+
+      // Adicionar conta bancária se fornecida
+      if (
+        sellerForm.bankAccount &&
+        sellerForm.bankAccount.bank &&
+        sellerForm.bankAccount.agency &&
+        sellerForm.bankAccount.account
+      ) {
+        data.contaBancaria = {
+          banco: sellerForm.bankAccount.bank,
+          agencia: sellerForm.bankAccount.agency,
+          conta: sellerForm.bankAccount.account,
+        }
+      }
+
+      mutateSellerRegister(data)
     }
   }
 
@@ -270,6 +315,31 @@ export default function RegisterScreen() {
       </View>
 
       <TouchableOpacity
+        className="flex-row items-center py-2"
+        onPress={() =>
+          setCustomerForm({
+            ...customerForm,
+            acceptMarketing: !customerForm.acceptMarketing,
+          })
+        }
+      >
+        <View
+          className={`w-6 h-6 rounded border-2 mr-3 items-center justify-center ${
+            customerForm.acceptMarketing
+              ? 'bg-frgprimary border-frgprimary'
+              : 'border-gray-300'
+          }`}
+        >
+          {customerForm.acceptMarketing && (
+            <Ionicons name="checkmark" size={16} color="white" />
+          )}
+        </View>
+        <Text className="text-system-text text-sm flex-1">
+          Aceito receber e-mails com ofertas e novidades
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
         className={`bg-frgprimary rounded-xl py-4 mt-6 ${
           isCustomerPending ? 'opacity-70' : ''
         }`}
@@ -286,15 +356,13 @@ export default function RegisterScreen() {
   const renderSellerForm = () => (
     <View className="space-y-4">
       <View>
-        <Text className="text-frg900 font-medium mb-2">Nome da Empresa</Text>
+        <Text className="text-frg900 font-medium mb-2">Nome Completo</Text>
         <TextInput
           className="bg-inputbg border border-gray-200 rounded-xl px-4 py-4 text-base"
-          placeholder="Digite o nome da sua empresa"
+          placeholder="Digite seu nome completo"
           placeholderTextColor="#9FABB9"
-          value={sellerForm.companyName}
-          onChangeText={(text) =>
-            setSellerForm({ ...sellerForm, companyName: text })
-          }
+          value={sellerForm.name}
+          onChangeText={(text) => setSellerForm({ ...sellerForm, name: text })}
         />
       </View>
 
@@ -338,6 +406,21 @@ export default function RegisterScreen() {
       </View>
 
       <View>
+        <Text className="text-frg900 font-medium mb-2">CPF</Text>
+        <TextInput
+          className="bg-inputbg border border-gray-200 rounded-xl px-4 py-4 text-base"
+          placeholder="000.000.000-00"
+          placeholderTextColor="#9FABB9"
+          value={sellerForm.cpf}
+          onChangeText={(text) =>
+            setSellerForm({ ...sellerForm, cpf: formatCPF(text) })
+          }
+          keyboardType="numeric"
+          maxLength={14}
+        />
+      </View>
+
+      <View>
         <Text className="text-frg900 font-medium mb-2">CNPJ</Text>
         <TextInput
           className="bg-inputbg border border-gray-200 rounded-xl px-4 py-4 text-base"
@@ -353,35 +436,96 @@ export default function RegisterScreen() {
       </View>
 
       <View>
-        <Text className="text-frg900 font-medium mb-2">Endereço</Text>
+        <Text className="text-frg900 font-medium mb-2">Razão Social</Text>
         <TextInput
           className="bg-inputbg border border-gray-200 rounded-xl px-4 py-4 text-base"
-          placeholder="Digite o endereço da empresa"
+          placeholder="Digite a razão social"
           placeholderTextColor="#9FABB9"
-          value={sellerForm.address}
+          value={sellerForm.companyName}
           onChangeText={(text) =>
-            setSellerForm({ ...sellerForm, address: text })
+            setSellerForm({ ...sellerForm, companyName: text })
           }
-          multiline
-          numberOfLines={2}
         />
       </View>
 
       <View>
-        <Text className="text-frg900 font-medium mb-2">
-          Descrição da Empresa
-        </Text>
+        <Text className="text-frg900 font-medium mb-2">Nome Fantasia</Text>
         <TextInput
           className="bg-inputbg border border-gray-200 rounded-xl px-4 py-4 text-base"
-          placeholder="Descreva sua empresa e produtos"
+          placeholder="Digite o nome fantasia"
           placeholderTextColor="#9FABB9"
-          value={sellerForm.description}
+          value={sellerForm.tradeName}
           onChangeText={(text) =>
-            setSellerForm({ ...sellerForm, description: text })
+            setSellerForm({ ...sellerForm, tradeName: text })
           }
-          multiline
-          numberOfLines={3}
         />
+      </View>
+
+      <View>
+        <Text className="text-frg900 font-medium mb-2">Inscrição Estadual</Text>
+        <TextInput
+          className="bg-inputbg border border-gray-200 rounded-xl px-4 py-4 text-base"
+          placeholder="Digite a inscrição estadual"
+          placeholderTextColor="#9FABB9"
+          value={sellerForm.stateRegistration}
+          onChangeText={(text) =>
+            setSellerForm({ ...sellerForm, stateRegistration: text })
+          }
+        />
+      </View>
+
+      <View className="mt-4">
+        <Text className="text-frg900 font-bold text-base mb-3">
+          Dados Bancários (Opcional)
+        </Text>
+
+        <View className="mb-3">
+          <Text className="text-frg900 font-medium mb-2">Banco</Text>
+          <TextInput
+            className="bg-inputbg border border-gray-200 rounded-xl px-4 py-4 text-base"
+            placeholder="Ex: 001"
+            placeholderTextColor="#9FABB9"
+            value={sellerForm.bankAccount?.bank || ''}
+            onChangeText={(text) =>
+              setSellerForm({
+                ...sellerForm,
+                bankAccount: { ...sellerForm.bankAccount!, bank: text },
+              })
+            }
+          />
+        </View>
+
+        <View className="mb-3">
+          <Text className="text-frg900 font-medium mb-2">Agência</Text>
+          <TextInput
+            className="bg-inputbg border border-gray-200 rounded-xl px-4 py-4 text-base"
+            placeholder="Ex: 1234"
+            placeholderTextColor="#9FABB9"
+            value={sellerForm.bankAccount?.agency || ''}
+            onChangeText={(text) =>
+              setSellerForm({
+                ...sellerForm,
+                bankAccount: { ...sellerForm.bankAccount!, agency: text },
+              })
+            }
+          />
+        </View>
+
+        <View>
+          <Text className="text-frg900 font-medium mb-2">Conta</Text>
+          <TextInput
+            className="bg-inputbg border border-gray-200 rounded-xl px-4 py-4 text-base"
+            placeholder="Ex: 12345-6"
+            placeholderTextColor="#9FABB9"
+            value={sellerForm.bankAccount?.account || ''}
+            onChangeText={(text) =>
+              setSellerForm({
+                ...sellerForm,
+                bankAccount: { ...sellerForm.bankAccount!, account: text },
+              })
+            }
+          />
+        </View>
       </View>
 
       <View>
@@ -465,7 +609,6 @@ export default function RegisterScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View className="flex-1 px-6 pt-8">
-            {/* Header */}
             <View className="items-center mb-8">
               <TouchableOpacity
                 onPress={() => router.back()}
@@ -485,7 +628,6 @@ export default function RegisterScreen() {
               </Text>
             </View>
 
-            {/* Tab Selector */}
             <View className="bg-gray-100 rounded-xl p-1 mb-6">
               <View className="flex-row">
                 <TouchableOpacity
@@ -538,15 +680,13 @@ export default function RegisterScreen() {
               </View>
             </View>
 
-            {/* Form Content */}
             <View className="mb-6">
               {activeTab === 'customer'
                 ? renderCustomerForm()
                 : renderSellerForm()}
             </View>
 
-            {/* Footer */}
-            <View className="mt-8 items-center">
+            <View className="mt-8 mb-8 items-center">
               <Text className="text-system-text">
                 Já tem uma conta?{' '}
                 <TouchableOpacity onPress={() => router.back()}>

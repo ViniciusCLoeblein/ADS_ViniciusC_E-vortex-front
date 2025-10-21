@@ -5,9 +5,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Link } from 'expo-router'
+import { Link, router } from 'expo-router'
 import PagerView from 'react-native-pager-view'
 import {
   RegisterHeader,
@@ -30,6 +31,22 @@ export default function RegisterScreen() {
   const handlePageSelected = (e: { nativeEvent: { position: number } }) => {
     const page = e.nativeEvent.position
     setActiveTab(page === 0 ? 'customer' : 'seller')
+  }
+
+  const handleRegisterSuccess = () => {
+    const userType = activeTab === 'customer' ? 'Cliente' : 'Vendedor'
+    Alert.alert(
+      'Sucesso',
+      `${userType} registrado com sucesso! Fazendo login...`,
+      [
+        {
+          text: 'OK',
+          onPress: () => {
+            router.replace('/home')
+          },
+        },
+      ],
+    )
   }
 
   return (
@@ -55,7 +72,7 @@ export default function RegisterScreen() {
                   keyboardShouldPersistTaps="handled"
                   contentContainerStyle={{ paddingBottom: 10 }}
                 >
-                  <CustomerForm onSuccess={() => {}} />
+                  <CustomerForm onSuccess={handleRegisterSuccess} />
                   <View className="mt-8 mb-8 items-center">
                     <Text className="text-system-text">
                       Já tem uma conta?{' '}
@@ -75,7 +92,7 @@ export default function RegisterScreen() {
                   keyboardShouldPersistTaps="handled"
                   contentContainerStyle={{ paddingBottom: 10 }}
                 >
-                  <SellerForm onSuccess={() => {}} />
+                  <SellerForm onSuccess={handleRegisterSuccess} />
                   <View className="mt-8 mb-8 items-center">
                     <Text className="text-system-text">
                       Já tem uma conta?{' '}

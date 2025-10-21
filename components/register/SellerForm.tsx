@@ -1,7 +1,6 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { View, Text, TextInput, TouchableOpacity, Alert } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import { router } from 'expo-router'
 import {
   formatCPF,
   formatCNPJ,
@@ -50,18 +49,8 @@ export default function SellerForm({ onSuccess }: SellerFormProps) {
       // Simular chamada de API
       setTimeout(() => {
         setIsPending(false)
-        Alert.alert('Sucesso', 'Vendedor registrado com sucesso!', [
-          {
-            text: 'OK',
-            onPress: () => {
-              try {
-                router.replace('/login')
-              } catch (error) {
-                console.log('Navigation error:', error)
-              }
-            },
-          },
-        ])
+        // Chamar onSuccess para fazer login automático
+        onSuccess()
       }, 2000)
     }
   }

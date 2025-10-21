@@ -8,7 +8,6 @@ import {
   Switch,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import { router } from 'expo-router'
 import {
   formatCPF,
   formatPhone,
@@ -52,21 +51,9 @@ export default function CustomerForm({ onSuccess }: CustomerFormProps) {
     if (handleValidation()) {
       setIsPending(true)
 
-      // Simular chamada de API
       setTimeout(() => {
         setIsPending(false)
-        Alert.alert('Sucesso', 'Cliente registrado com sucesso!', [
-          {
-            text: 'OK',
-            onPress: () => {
-              try {
-                router.replace('/login')
-              } catch (error) {
-                console.log('Navigation error:', error)
-              }
-            },
-          },
-        ])
+        onSuccess()
       }, 2000)
     }
   }

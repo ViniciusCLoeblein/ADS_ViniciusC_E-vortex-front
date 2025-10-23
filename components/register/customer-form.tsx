@@ -8,6 +8,7 @@ import {
   Switch,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
+import { useMutation } from '@tanstack/react-query'
 import {
   formatCPF,
   formatPhone,
@@ -15,15 +16,16 @@ import {
   validateCustomerForm,
   type CustomerFormData,
 } from '@/lib/utils'
+import { registerCustomer } from '@/services/auth'
+import type { RegisterCustomerReq } from '@/services/auth/interface'
 
 interface CustomerFormProps {
-  onSuccess: () => void
+  onSuccess: (credentials?: { email: string; password: string }) => void
 }
 
 export default function CustomerForm({ onSuccess }: CustomerFormProps) {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [isPending, setIsPending] = useState(false)
 
   const [form, setForm] = useState<CustomerFormData>({
     name: '',
@@ -34,6 +36,22 @@ export default function CustomerForm({ onSuccess }: CustomerFormProps) {
     birthDate: '',
     cpf: '',
     acceptMarketing: false,
+  })
+
+  const registerCustomerMutation = useMutation({
+    mutationFn: registerCustomer,
+    onSuccess: () => {
+      onSuccess({
+        email: form.email,
+        password: form.password,
+      })
+    },
+    onError: (error: unknown) => {
+      const errorMessage =
+        (error as { response?: { data?: { message?: string } } })?.response
+          ?.data?.message || 'Erro ao registrar cliente'
+      Alert.alert('Erro', errorMessage)
+    },
   })
 
   const handleValidation = () => {
@@ -49,12 +67,18 @@ export default function CustomerForm({ onSuccess }: CustomerFormProps) {
 
   const handleRegister = async () => {
     if (handleValidation()) {
-      setIsPending(true)
+      const payload: RegisterCustomerReq = {
+        nome: form.name,
+        email: form.email,
+        senha: form.password,
+        cpf: form.cpf.replace(/\D/g, ''),
+        tipo: 'cliente',
+        telefone: form.phone.replace(/\D/g, ''),
+        dataNascimento: form.birthDate.replace(/\D/g, ''),
+        aceitaMarketing: form.acceptMarketing,
+      }
 
-      setTimeout(() => {
-        setIsPending(false)
-        onSuccess()
-      }, 2000)
+      registerCustomerMutation.mutate(payload)
     }
   }
 
@@ -205,13 +229,15 @@ export default function CustomerForm({ onSuccess }: CustomerFormProps) {
 
       <TouchableOpacity
         className={`bg-frgprimary rounded-xl py-4 mt-6 ${
-          isPending ? 'opacity-70' : ''
+          registerCustomerMutation.isPending ? 'opacity-70' : ''
         }`}
         onPress={handleRegister}
-        disabled={isPending}
+        disabled={registerCustomerMutation.isPending}
       >
         <Text className="text-white text-center text-lg font-semibold">
-          {isPending ? 'Registrando...' : 'Criar Conta de Cliente'}
+          {registerCustomerMutation.isPending
+            ? 'Registrando...'
+            : 'Criar Conta de Cliente'}
         </Text>
       </TouchableOpacity>
     </View>

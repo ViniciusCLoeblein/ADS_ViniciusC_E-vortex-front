@@ -5,6 +5,7 @@ export const FustatMedium = ({ style, ...props }: TextProps) => {
   return (
     <Text
       {...props}
+      allowFontScaling={false}
       style={[styles.text, style]}
       className={cn(props.className, {
         'text-black': !props.className?.includes('text-'),

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { View, Text, TextInput, TouchableOpacity, Alert } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
+import { useMutation } from '@tanstack/react-query'
 import {
   formatCPF,
   formatCNPJ,
@@ -8,15 +9,16 @@ import {
   validateSellerForm,
   type SellerFormData,
 } from '@/lib/utils'
+import { registerSeller } from '@/services/auth'
+import type { RegisterSellerReq } from '@/services/auth/interface'
 
 interface SellerFormProps {
-  onSuccess: () => void
+  onSuccess: (credentials?: { email: string; password: string }) => void
 }
 
 export default function SellerForm({ onSuccess }: SellerFormProps) {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [isPending, setIsPending] = useState(false)
 
   const [form, setForm] = useState<SellerFormData>({
     name: '',
@@ -29,6 +31,22 @@ export default function SellerForm({ onSuccess }: SellerFormProps) {
     companyName: '',
     tradeName: '',
     stateRegistration: '',
+  })
+
+  const registerSellerMutation = useMutation({
+    mutationFn: registerSeller,
+    onSuccess: () => {
+      onSuccess({
+        email: form.email,
+        password: form.password,
+      })
+    },
+    onError: (error: unknown) => {
+      const errorMessage =
+        (error as { response?: { data?: { message?: string } } })?.response
+          ?.data?.message || 'Erro ao registrar vendedor'
+      Alert.alert('Erro', errorMessage)
+    },
   })
 
   const handleValidation = () => {
@@ -44,14 +62,29 @@ export default function SellerForm({ onSuccess }: SellerFormProps) {
 
   const handleRegister = async () => {
     if (handleValidation()) {
-      setIsPending(true)
+      const payload: RegisterSellerReq = {
+        nome: form.name,
+        email: form.email,
+        senha: form.password,
+        cpf: form.cpf.replace(/\D/g, ''),
+        telefone: form.phone.replace(/\D/g, ''),
+        cnpj: form.cnpj.replace(/\D/g, ''),
+        razaoSocial: form.companyName,
+        nomeFantasia: form.tradeName,
+        inscricaoEstadual: form.stateRegistration,
+        contaBancaria:
+          form.bankAccount?.bank ||
+          form.bankAccount?.agency ||
+          form.bankAccount?.account
+            ? {
+                banco: form.bankAccount?.bank || '',
+                agencia: form.bankAccount?.agency || '',
+                conta: form.bankAccount?.account || '',
+              }
+            : undefined,
+      }
 
-      // Simular chamada de API
-      setTimeout(() => {
-        setIsPending(false)
-        // Chamar onSuccess para fazer login automático
-        onSuccess()
-      }, 2000)
+      registerSellerMutation.mutate(payload)
     }
   }
 
@@ -284,13 +317,15 @@ export default function SellerForm({ onSuccess }: SellerFormProps) {
 
       <TouchableOpacity
         className={`bg-frgprimary rounded-xl py-4 mt-6 ${
-          isPending ? 'opacity-70' : ''
+          registerSellerMutation.isPending ? 'opacity-70' : ''
         }`}
         onPress={handleRegister}
-        disabled={isPending}
+        disabled={registerSellerMutation.isPending}
       >
         <Text className="text-white text-center text-lg font-semibold">
-          {isPending ? 'Registrando...' : 'Criar Conta de Vendedor'}
+          {registerSellerMutation.isPending
+            ? 'Registrando...'
+            : 'Criar Conta de Vendedor'}
         </Text>
       </TouchableOpacity>
     </View>

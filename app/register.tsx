@@ -10,16 +10,38 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Link, router } from 'expo-router'
 import PagerView from 'react-native-pager-view'
+import { useMutation } from '@tanstack/react-query'
 import {
   RegisterHeader,
   TabSelector,
   CustomerForm,
   SellerForm,
 } from '@/components'
+import { login } from '@/services/auth'
 
 export default function RegisterScreen() {
   const [activeTab, setActiveTab] = useState<'customer' | 'seller'>('customer')
   const pagerRef = useRef<PagerView>(null)
+
+  const loginMutation = useMutation({
+    mutationFn: login,
+    onSuccess: () => {
+      Alert.alert('Sucesso', 'Login realizado com sucesso!', [
+        {
+          text: 'OK',
+          onPress: () => {
+            router.replace('/home')
+          },
+        },
+      ])
+    },
+    onError: (error: unknown) => {
+      const errorMessage =
+        (error as { response?: { data?: { message?: string } } })?.response
+          ?.data?.message || 'Erro ao fazer login'
+      Alert.alert('Erro', errorMessage)
+    },
+  })
 
   const handleTabChange = (tab: 'customer' | 'seller') => {
     setActiveTab(tab)
@@ -33,20 +55,28 @@ export default function RegisterScreen() {
     setActiveTab(page === 0 ? 'customer' : 'seller')
   }
 
-  const handleRegisterSuccess = () => {
+  const handleRegisterSuccess = (credentials?: {
+    email: string
+    password: string
+  }) => {
     const userType = activeTab === 'customer' ? 'Cliente' : 'Vendedor'
-    Alert.alert(
-      'Sucesso',
-      `${userType} registrado com sucesso! Fazendo login...`,
-      [
+
+    if (credentials) {
+      // Para clientes e vendedores, fazer login automático
+      loginMutation.mutate({
+        email: credentials.email,
+        senha: credentials.password,
+      })
+    } else {
+      Alert.alert('Sucesso', `${userType} registrado com sucesso!`, [
         {
           text: 'OK',
           onPress: () => {
-            router.replace('/home')
+            router.replace('/login')
           },
         },
-      ],
-    )
+      ])
+    }
   }
 
   return (

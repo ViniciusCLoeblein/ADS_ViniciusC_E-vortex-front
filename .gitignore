@@ -46,11 +46,6 @@ app-example
 android/
 ios/
 
-# google
-firebase-credentials.json
-google-services.json
-GoogleService-Info.plist
-
 .expo-shared
 
 # builds

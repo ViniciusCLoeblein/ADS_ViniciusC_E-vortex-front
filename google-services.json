@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1050702974675",
+    "project_id": "e-vortex",
+    "storage_bucket": "e-vortex.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1050702974675:android:0345c022b244b91da18e26",
+        "android_client_info": {
+          "package_name": "com.evortex"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAHC7xpGKXUzzEqMvHl5DAbO-onkwD5gKw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

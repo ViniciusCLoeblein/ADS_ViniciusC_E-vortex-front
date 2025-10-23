@@ -32,72 +32,28 @@ const config: ExpoConfig = {
       ITSAppUsesNonExemptEncryption: false,
     },
     bundleIdentifier: 'br.com.evortex.app',
-    associatedDomains: [
-      'applinks:app.evortex.com.br',
-      'applinks:evortex.com.br',
-    ],
   },
   runtimeVersion: {
     policy: 'appVersion',
   },
   android: {
-    versionCode: 1610550255,
-    permissions: [
-      'ACCESS_FINE_LOCATION',
-      'ACCESS_COARSE_LOCATION',
-      'com.google.android.gms.permission.AD_ID',
-      'RECEIVE_BOOT_COMPLETED',
-      'VIBRATE',
-      'CAMERA',
-    ],
+    versionCode: 1,
+    permissions: ['RECEIVE_BOOT_COMPLETED', 'VIBRATE', 'CAMERA'],
     adaptiveIcon: {
       foregroundImage: './assets/images/favicon.png',
       backgroundColor: '#FFFFFF',
     },
     splash: {
-      image: './assets/images/favicon-old.png',
+      image: './assets/images/favicon.png',
       backgroundColor: '#FFFFFF',
       dark: {
-        image: './assets/images/ic_white.png',
+        image: './assets/images/favicon.png',
         backgroundColor: '#000000',
       },
     },
     package: 'com.evortex',
     googleServicesFile: './google-services.json',
     jsEngine: 'hermes',
-    intentFilters: [
-      {
-        action: 'VIEW',
-        autoVerify: true,
-        data: [
-          {
-            scheme: 'https',
-            host: 'app.evortex.com.br',
-            pathPrefix: '/site',
-          },
-          {
-            scheme: 'https',
-            host: 'app.evortex.com.br',
-            pathPrefix: '/site/',
-          },
-          {
-            scheme: 'https',
-            host: 'evortex.com.br',
-            pathPrefix: '/site',
-          },
-        ],
-        category: ['BROWSABLE', 'DEFAULT'],
-      },
-      {
-        action: 'VIEW',
-        data: [
-          {
-            scheme: 'evortex',
-          },
-        ],
-        category: ['BROWSABLE', 'DEFAULT'],
-      },
-    ],
   },
   plugins: [
     [
@@ -120,10 +76,10 @@ const config: ExpoConfig = {
     [
       'expo-splash-screen',
       {
-        image: './assets/images/favicon-old.png',
+        image: './assets/images/favicon.png',
         backgroundColor: '#FFFFFF',
         dark: {
-          image: './assets/images/ic_white.png',
+          image: './assets/images/favicon.png',
           backgroundColor: '#000000',
         },
       },
@@ -150,20 +106,6 @@ const config: ExpoConfig = {
         android: {
           parentTheme: 'Default',
         },
-      },
-    ],
-    [
-      'expo-updates',
-      {
-        username: 'evortex',
-        projectId: '681001f7-1108-46bc-a9ff-cc62de0de5a5',
-        runtimeVersion: {
-          policy: 'appVersion',
-        },
-        updateUrl: 'https://u.expo.dev/681001f7-1108-46bc-a9ff-cc62de0de5a5',
-        enabled: true,
-        checkAutomatically: 'ON_LOAD',
-        fallbackToCacheTimeout: 0,
       },
     ],
     [

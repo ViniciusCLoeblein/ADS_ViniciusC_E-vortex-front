@@ -6,27 +6,61 @@ import {
   TouchableOpacity,
   Image,
   Alert,
+  RefreshControl,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { router } from 'expo-router'
-import { useCart } from '@/contexts/CartContext'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import {
+  obterCarrinho,
+  atualizarItemCarrinho,
+  removerItemCarrinho,
+  limparCarrinho,
+} from '@/services/sales'
 
 export default function CartScreen() {
-  const { items, removeFromCart, updateQuantity, clearCart, getTotalPrice } =
-    useCart()
+  const queryClient = useQueryClient()
   const [isProcessing, setIsProcessing] = useState(false)
 
-  const handleQuantityChange = (productId: string, newQuantity: number) => {
+  const { data: carrinho, isLoading, refetch } = useQuery({
+    queryKey: ['carrinho'],
+    queryFn: obterCarrinho,
+  })
+
+  const updateItemMutation = useMutation({
+    mutationFn: ({ itemId, quantidade }: { itemId: string; quantidade: number }) =>
+      atualizarItemCarrinho(itemId, { quantidade }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['carrinho'] })
+    },
+  })
+
+  const removeItemMutation = useMutation({
+    mutationFn: removerItemCarrinho,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['carrinho'] })
+    },
+  })
+
+  const clearCartMutation = useMutation({
+    mutationFn: limparCarrinho,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['carrinho'] })
+      Alert.alert('Sucesso', 'Carrinho limpo com sucesso!')
+    },
+  })
+
+  const handleQuantityChange = (itemId: string, newQuantity: number) => {
     if (newQuantity <= 0) {
-      removeFromCart(productId)
+      removeItemMutation.mutate(itemId)
     } else {
-      updateQuantity(productId, newQuantity)
+      updateItemMutation.mutate({ itemId, quantidade: newQuantity })
     }
   }
 
   const handleCheckout = async () => {
-    if (items.length === 0) {
+    if (!carrinho || carrinho.itens.length === 0) {
       Alert.alert(
         'Carrinho vazio',
         'Adicione produtos ao carrinho antes de finalizar a compra.',
@@ -42,12 +76,12 @@ export default function CartScreen() {
 
       Alert.alert(
         'Compra finalizada!',
-        `Pedido de R$ ${getTotalPrice().toFixed(2).replace('.', ',')} realizado com sucesso!`,
+        `Pedido de ${formatPrice(carrinho.total)} realizado com sucesso!`,
         [
           {
             text: 'OK',
             onPress: () => {
-              clearCart()
+              clearCartMutation.mutate()
               router.replace('/home')
             },
           },
@@ -60,16 +94,14 @@ export default function CartScreen() {
     }
   }
 
-  const formatPrice = (price: string) => {
-    return price.replace('R$ ', '').replace('.', '').replace(',', '.')
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(price)
   }
 
-  const calculateItemTotal = (item: (typeof items)[0]) => {
-    const price = parseFloat(formatPrice(item.price))
-    return price * item.quantity
-  }
-
-  if (items.length === 0) {
+  if (!carrinho || carrinho.itens.length === 0) {
     return (
       <SafeAreaView className="flex-1 bg-gray-50">
         <View className="bg-white px-6 py-4 shadow-sm">
@@ -114,85 +146,108 @@ export default function CartScreen() {
             <Ionicons name="arrow-back" size={24} color="#9FABB9" />
           </TouchableOpacity>
           <Text className="text-frg900 font-bold text-xl">Carrinho</Text>
-          <TouchableOpacity onPress={clearCart}>
+          <TouchableOpacity
+            onPress={() => {
+              Alert.alert(
+                'Limpar carrinho',
+                'Tem certeza que deseja limpar o carrinho?',
+                [
+                  { text: 'Cancelar', style: 'cancel' },
+                  {
+                    text: 'Limpar',
+                    style: 'destructive',
+                    onPress: () => clearCartMutation.mutate(),
+                  },
+                ],
+              )
+            }}
+          >
             <Ionicons name="trash-outline" size={24} color="#EF4058" />
           </TouchableOpacity>
         </View>
       </View>
 
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        {/* Items List */}
+      <ScrollView
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={isLoading} onRefresh={refetch} />
+        }
+      >
         <View className="px-6 py-4">
-          {items.map((item) => (
-            <View
-              key={item.id}
-              className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4"
-            >
-              <View className="flex-row">
-                <Image
-                  source={{ uri: item.image }}
-                  className="w-20 h-20 rounded-xl mr-4"
-                  resizeMode="cover"
-                  alt={item.name}
-                />
+          {isLoading ? (
+            <View className="items-center py-8">
+              <Text className="text-system-text">Carregando carrinho...</Text>
+            </View>
+          ) : (
+            carrinho?.itens.map((item) => (
+              <View
+                key={item.id}
+                className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4"
+              >
+                <View className="flex-row">
+                  <Image
+                    source={{
+                      uri:
+                        item.produto?.imagemPrincipal ||
+                        'https://via.placeholder.com/100',
+                    }}
+                    className="w-20 h-20 rounded-xl mr-4"
+                    resizeMode="cover"
+                  />
 
-                <View className="flex-1">
-                  <Text
-                    className="text-frg900 font-semibold text-base mb-1"
-                    numberOfLines={2}
-                  >
-                    {item.name}
-                  </Text>
-
-                  <View className="flex-row items-center mb-2">
-                    <Ionicons name="star" size={12} color="#FFD700" />
-                    <Text className="text-xs text-system-text ml-1">
-                      {item.rating}
+                  <View className="flex-1">
+                    <Text
+                      className="text-frg900 font-semibold text-base mb-1"
+                      numberOfLines={2}
+                    >
+                      {item.produto?.nome || 'Produto'}
                     </Text>
-                    <Text className="text-xs text-system-text ml-1">
-                      ({item.reviews})
-                    </Text>
-                  </View>
 
-                  <View className="flex-row items-center justify-between">
-                    <View>
-                      <Text className="text-frgprimary font-bold text-lg">
-                        R${' '}
-                        {calculateItemTotal(item).toFixed(2).replace('.', ',')}
-                      </Text>
-                      <Text className="text-system-text text-sm">
-                        R$ {formatPrice(item.price).replace('.', ',')} cada
-                      </Text>
-                    </View>
+                    <View className="flex-row items-center justify-between">
+                      <View>
+                        <Text className="text-frgprimary font-bold text-lg">
+                          {formatPrice(item.subtotal)}
+                        </Text>
+                        <Text className="text-system-text text-sm">
+                          {formatPrice(item.precoUnitario)} cada
+                        </Text>
+                      </View>
 
-                    <View className="flex-row items-center">
-                      <TouchableOpacity
-                        className="bg-gray-100 rounded-full w-8 h-8 items-center justify-center"
-                        onPress={() =>
-                          handleQuantityChange(item.id, item.quantity - 1)
-                        }
-                      >
-                        <Ionicons name="remove" size={16} color="#9FABB9" />
-                      </TouchableOpacity>
+                      <View className="flex-row items-center">
+                        <TouchableOpacity
+                          className="bg-gray-100 rounded-full w-8 h-8 items-center justify-center"
+                          onPress={() =>
+                            handleQuantityChange(item.id, item.quantidade - 1)
+                          }
+                          disabled={
+                            updateItemMutation.isPending ||
+                            removeItemMutation.isPending
+                          }
+                        >
+                          <Ionicons name="remove" size={16} color="#9FABB9" />
+                        </TouchableOpacity>
 
-                      <Text className="mx-4 text-frg900 font-semibold text-base">
-                        {item.quantity}
-                      </Text>
+                        <Text className="mx-4 text-frg900 font-semibold text-base">
+                          {item.quantidade}
+                        </Text>
 
-                      <TouchableOpacity
-                        className="bg-frgprimary rounded-full w-8 h-8 items-center justify-center"
-                        onPress={() =>
-                          handleQuantityChange(item.id, item.quantity + 1)
-                        }
-                      >
-                        <Ionicons name="add" size={16} color="white" />
-                      </TouchableOpacity>
+                        <TouchableOpacity
+                          className="bg-frgprimary rounded-full w-8 h-8 items-center justify-center"
+                          onPress={() =>
+                            handleQuantityChange(item.id, item.quantidade + 1)
+                          }
+                          disabled={updateItemMutation.isPending}
+                        >
+                          <Ionicons name="add" size={16} color="white" />
+                        </TouchableOpacity>
+                      </View>
                     </View>
                   </View>
                 </View>
               </View>
-            </View>
-          ))}
+            ))
+          )}
         </View>
 
         {/* Bottom Spacing */}
@@ -204,7 +259,7 @@ export default function CartScreen() {
         <View className="flex-row items-center justify-between mb-4">
           <Text className="text-frg900 font-semibold text-lg">Total:</Text>
           <Text className="text-frgprimary font-bold text-2xl">
-            R$ {getTotalPrice().toFixed(2).replace('.', ',')}
+            {carrinho ? formatPrice(carrinho.total) : 'R$ 0,00'}
           </Text>
         </View>
 

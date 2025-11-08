@@ -14,7 +14,7 @@ export interface ItemCarrinhoRes {
   produto?: {
     id: string
     nome: string
-    imagem?: string
+    imagemPrincipal?: string
   }
   variacao?: {
     id: string

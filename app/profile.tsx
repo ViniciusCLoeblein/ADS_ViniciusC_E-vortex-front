@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { router } from 'expo-router'
 import { useCustomerStore } from '@/stores/customer'
 import { useAuthStore } from '@/stores/auth'
+import { maskCPF, maskPhone } from '@/constants/masks'
 
 export default function ProfileScreen() {
   const { profile } = useCustomerStore()
@@ -55,18 +56,62 @@ export default function ProfileScreen() {
                   </Text>
                 </View>
 
-                <InfoRow label="Nome Completo" value={profile.nome} />
-                <InfoRow label="Email" value={profile.email} />
+                <InfoRow label="CPF" value={maskCPF(profile.cpf)} />
                 <InfoRow
                   label="Status do Email"
-                  value={profile.emailVerificado ? 'Verificado' : 'Não verificado'}
+                  value={
+                    profile.emailVerificado ? 'Verificado' : 'Não verificado'
+                  }
                 />
-                <InfoRow label="CPF" value={profile.cpf} />
-                <InfoRow label="Telefone" value={profile.telefone} />
+                <InfoRow label="Telefone" value={maskPhone(profile.telefone)} />
                 <InfoRow label="Tipo" value={profile.tipo} />
                 <InfoRow label="ID" value={profile.id} />
                 <InfoRow label="UUID" value={profile.uuid} />
               </View>
+
+              <TouchableOpacity
+                className="bg-white rounded-2xl p-4 mb-4 shadow-sm flex-row items-center justify-between"
+                onPress={() => router.push('/profile/addresses')}
+              >
+                <View className="flex-row items-center">
+                  <View className="bg-frgprimary/10 rounded-full p-3 mr-4">
+                    <Ionicons
+                      name="location-outline"
+                      size={24}
+                      color="#437C99"
+                    />
+                  </View>
+                  <View>
+                    <Text className="text-frg900 font-semibold text-base">
+                      Gerenciar Endereços
+                    </Text>
+                    <Text className="text-system-text text-sm">
+                      Adicionar, editar ou remover endereços
+                    </Text>
+                  </View>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#9FABB9" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                className="bg-white rounded-2xl p-4 mb-6 shadow-sm flex-row items-center justify-between"
+                onPress={() => router.push('/profile/cards')}
+              >
+                <View className="flex-row items-center">
+                  <View className="bg-frgprimary/10 rounded-full p-3 mr-4">
+                    <Ionicons name="card-outline" size={24} color="#437C99" />
+                  </View>
+                  <View>
+                    <Text className="text-frg900 font-semibold text-base">
+                      Gerenciar Cartões
+                    </Text>
+                    <Text className="text-system-text text-sm">
+                      Adicionar ou remover cartões de crédito
+                    </Text>
+                  </View>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#9FABB9" />
+              </TouchableOpacity>
 
               <TouchableOpacity
                 className="bg-red-500 rounded-xl py-4 mb-6"
@@ -90,4 +135,3 @@ export default function ProfileScreen() {
     </SafeAreaView>
   )
 }
-

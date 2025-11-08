@@ -18,7 +18,7 @@ export const maskPhone = (v: string | number): string => {
   const value = String(v).replace(/\D/g, '').slice(0, 16)
 
   return value
-    .replace(/(\d{0})(\d)/, '$1($2')
+    .replace(/(\d)/, '($1')
     .replace(/(\d{2})(\d)/, '$1) $2')
     .replace(/(\d{2})(\d{1,4})$/, '$1-$2')
 }
@@ -87,4 +87,9 @@ export function maskCardNumber(cardNumber: string | undefined | null): string {
   }
 
   return formatado.trim()
+}
+
+export const maskCEP = (v: string | number): string => {
+  const value = String(v).replace(/\D/g, '').slice(0, 8)
+  return value
 }

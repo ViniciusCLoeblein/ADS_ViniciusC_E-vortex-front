@@ -1,5 +1,5 @@
 import '../global.css'
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useState } from 'react'
 import { Stack } from 'expo-router'
 import * as SplashScreen from 'expo-splash-screen'
 
@@ -55,6 +55,8 @@ export default function RootLayout() {
     'Fustat-Medium': require('@/assets/fonts/Fustat-Medium.ttf'),
   })
 
+  const [isMounted, setIsMounted] = useState(false)
+
   const onLayoutRootView = useCallback(async () => {
     if (fontsLoaded) {
       await SplashScreen.hideAsync()
@@ -65,9 +67,33 @@ export default function RootLayout() {
     onLayoutRootView()
   }, [onLayoutRootView])
 
+  useEffect(() => {
+    if (fontsLoaded) {
+      const timer = setTimeout(() => {
+        setIsMounted(true)
+      }, 0)
+      return () => clearTimeout(timer)
+    }
+  }, [fontsLoaded])
+
   if (!fontsLoaded) {
     return null
   }
+
+  const screens = [
+    'index',
+    '+not-found',
+    'login',
+    'register',
+    'home',
+    'cart',
+    'mannequin',
+    'profile',
+    'profile/addresses',
+    'profile/cards',
+    'profile/addresses/new',
+    'profile/cards/new',
+  ]
 
   return (
     <>
@@ -81,25 +107,21 @@ export default function RootLayout() {
                   animation: 'fade',
                 }}
               >
-                <Stack.Screen name="index" options={{ headerShown: false }} />
-                <Stack.Screen name="login" options={{ headerShown: false }} />
-                <Stack.Screen
-                  name="register"
-                  options={{ headerShown: false }}
-                />
-                <Stack.Screen name="home" options={{ headerShown: false }} />
-                <Stack.Screen name="cart" options={{ headerShown: false }} />
-                <Stack.Screen
-                  name="mannequin"
-                  options={{ headerShown: false }}
-                />
-                <Stack.Screen name="profile" options={{ headerShown: false }} />
+                {screens.map((screen) => (
+                  <Stack.Screen
+                    key={screen}
+                    name={screen}
+                    options={{ headerShown: false }}
+                  />
+                ))}
               </Stack>
             </SafeAreaProvider>
           </MannequinProvider>
         </CartProvider>
       </QueryClientProvider>
-      <Toast position="top" topOffset={50} autoHide visibilityTime={5000} />
+      {isMounted && (
+        <Toast position="top" topOffset={50} autoHide visibilityTime={5000} />
+      )}
     </>
   )
 }

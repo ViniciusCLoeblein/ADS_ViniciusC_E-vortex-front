@@ -93,6 +93,7 @@ export default function RootLayout() {
                   name="mannequin"
                   options={{ headerShown: false }}
                 />
+                <Stack.Screen name="profile" options={{ headerShown: false }} />
               </Stack>
             </SafeAreaProvider>
           </MannequinProvider>

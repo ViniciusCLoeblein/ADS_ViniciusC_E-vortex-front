@@ -14,7 +14,6 @@ import { useMannequin } from '@/contexts/MannequinContext'
 import { useCart } from '@/contexts/CartContext'
 import { Mannequin3D } from '@/components/Mannequin3D'
 
-// Mock de itens equipáveis disponíveis
 const equippableItems = [
   {
     id: '5',
@@ -159,7 +158,7 @@ export default function MannequinScreen() {
               >
                 <View className="flex-row items-center">
                   <Ionicons
-                    name={getSlotIcon(slot) as any}
+                    name={getSlotIcon(slot) as keyof typeof Ionicons.glyphMap}
                     size={20}
                     color="#9FABB9"
                   />
@@ -180,7 +179,7 @@ export default function MannequinScreen() {
           <Text className="text-frg900 font-bold text-lg mb-4">
             Itens Disponíveis para Teste
           </Text>
-          <View className="space-y-4">
+          <View className="gap-4">
             {equippableItems.map((item) => (
               <View
                 key={item.id}
@@ -219,7 +218,7 @@ export default function MannequinScreen() {
                         </Text>
                       </View>
 
-                      <View className="flex-row space-x-2">
+                      <View className="flex-row gap-2">
                         <TouchableOpacity
                           className={`rounded-lg px-4 py-2 ${
                             isEquipped(item.id)

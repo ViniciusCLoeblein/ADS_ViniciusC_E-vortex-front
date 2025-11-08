@@ -13,15 +13,24 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, Link } from 'expo-router'
 import { useMutation } from '@tanstack/react-query'
 import { login } from '@/services/auth'
+import { useAuthStore } from '@/stores/auth'
 import { Ionicons } from '@expo/vector-icons'
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const setAuth = useAuthStore((state) => state.setAuth)
 
-  const { mutateAsync: mutateLogin, isPending } = useMutation({
+  const { mutate: mutateLogin, isPending } = useMutation({
     mutationFn: login,
+    onSuccess: (res) => {
+      setAuth(res)
+      router.replace('/home')
+    },
+    onError: () => {
+      Alert.alert('Erro', 'Falha no login. Tente novamente.')
+    },
   })
 
   const handleLogin = async () => {
@@ -35,12 +44,7 @@ export default function LoginScreen() {
       return
     }
 
-    try {
-      await mutateLogin({ email, senha: password })
-      router.replace('/home')
-    } catch (error) {
-      Alert.alert('Erro', 'Falha no login. Tente novamente.')
-    }
+    mutateLogin({ email, senha: password })
   }
 
   return (
@@ -66,7 +70,7 @@ export default function LoginScreen() {
               </Text>
             </View>
 
-            <View className="space-y-6">
+            <View className="gap-6">
               <View>
                 <Text className="text-frg900 font-medium mb-2">Email</Text>
                 <View className="relative">

@@ -4,12 +4,9 @@ export interface LoginReq {
 }
 
 export interface LoginRes {
-  token: string
-  user: {
-    id: string
-    name: string
-    email: string
-  }
+  accessToken: string
+  accessTokenExpiresAt: string
+  userId: string
 }
 
 export interface RegisterCustomerReq {

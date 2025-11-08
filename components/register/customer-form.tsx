@@ -83,7 +83,7 @@ export default function CustomerForm({ onSuccess }: CustomerFormProps) {
   }
 
   return (
-    <View className="space-y-4 gap-4">
+    <View className="gap-4">
       <View>
         <Text className="text-frg900 font-medium mb-2">Nome Completo</Text>
         <TextInput

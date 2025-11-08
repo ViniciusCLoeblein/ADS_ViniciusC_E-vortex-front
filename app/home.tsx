@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   View,
   Text,
@@ -11,8 +11,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { router } from 'expo-router'
+import { useQuery } from '@tanstack/react-query'
 import { useCart } from '@/contexts/CartContext'
-import { useMannequin } from '@/contexts/MannequinContext'
+import { useAuthStore } from '@/stores/auth'
+import { useCustomerStore } from '@/stores/customer'
+import { getCustomerProfile } from '@/services/customer'
 
 const mockProducts = [
   {
@@ -129,10 +132,25 @@ export default function HomeScreen() {
   const [searchText, setSearchText] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('1')
   const { addToCart, getTotalItems } = useCart()
-  const {} = useMannequin()
+  const { setProfile, profile } = useCustomerStore()
 
-  const handleLogout = () => {
-    router.replace('/login')
+  const { data: customerProfile, isLoading: isLoadingProfile } = useQuery({
+    queryKey: ['customerProfile'],
+    queryFn: getCustomerProfile,
+    enabled: !!useAuthStore.getState().accessToken,
+    retry: 1,
+  })
+
+  useEffect(() => {
+    if (customerProfile) {
+      setProfile(customerProfile)
+    }
+  }, [customerProfile, setProfile])
+
+  const getWelcomeMessage = () => {
+    if (isLoadingProfile) return 'Carregando...'
+    if (profile) return `Bem-vindo, ${profile.nome}!`
+    return 'Bem-vindo de volta!'
   }
 
   const handleAddToCart = (product: (typeof mockProducts)[0]) => {
@@ -198,7 +216,7 @@ export default function HomeScreen() {
             {item.originalPrice}
           </Text>
         </View>
-        <View className="flex-row space-x-2">
+        <View className="flex-row gap-2">
           {item.isEquippable && (
             <TouchableOpacity
               className="bg-blue-500 rounded-lg p-2"
@@ -246,21 +264,14 @@ export default function HomeScreen() {
         <View className="flex-row items-center justify-between mb-4">
           <View>
             <Text className="text-frg900 font-bold text-xl">E-Vortex</Text>
-            <Text className="text-system-text">Bem-vindo de volta!</Text>
+            <Text className="text-system-text">{getWelcomeMessage()}</Text>
           </View>
-          <View className="flex-row items-center space-x-3">
+          <View className="flex-row items-center gap-3">
             <TouchableOpacity
               className="bg-gray-100 rounded-full p-2"
               onPress={() => router.push('/mannequin')}
             >
-              <Ionicons name="person-outline" size={20} color="#9FABB9" />
-            </TouchableOpacity>
-            <TouchableOpacity className="bg-gray-100 rounded-full p-2">
-              <Ionicons
-                name="notifications-outline"
-                size={20}
-                color="#9FABB9"
-              />
+              <Ionicons name="shirt-outline" size={20} color="#9FABB9" />
             </TouchableOpacity>
             <TouchableOpacity
               className="bg-gray-100 rounded-full p-2 relative"
@@ -275,11 +286,22 @@ export default function HomeScreen() {
                 </View>
               )}
             </TouchableOpacity>
+            <TouchableOpacity className="bg-gray-100 rounded-full p-2">
+              <Ionicons
+                name="notifications-outline"
+                size={20}
+                color="#9FABB9"
+              />
+            </TouchableOpacity>
             <TouchableOpacity
-              onPress={handleLogout}
               className="bg-gray-100 rounded-full p-2"
+              onPress={() => router.push('/profile')}
             >
-              <Ionicons name="log-out-outline" size={20} color="#9FABB9" />
+              <Ionicons
+                name="person-circle-outline"
+                size={20}
+                color="#9FABB9"
+              />
             </TouchableOpacity>
           </View>
         </View>
@@ -300,20 +322,6 @@ export default function HomeScreen() {
       </View>
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        <View className="mx-6 mt-4 mb-6">
-          <View className="bg-gradient-to-r from-frgprimary to-frgsecondary rounded-2xl p-6">
-            <Text className="text-white text-xl font-bold mb-2">
-              Oferta Especial!
-            </Text>
-            <Text className="text-white text-sm mb-4 opacity-90">
-              Até 50% de desconto em eletrônicos
-            </Text>
-            <TouchableOpacity className="bg-white rounded-xl py-3 px-6 self-start">
-              <Text className="text-frgprimary font-semibold">Ver Ofertas</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
         <View className="px-6 mb-6">
           <Text className="text-frg900 font-bold text-lg mb-4">Categorias</Text>
           <FlatList

@@ -1,4 +1,4 @@
-import axios from '../index'
+import axios from '../'
 import {
   LoginReq,
   LoginRes,

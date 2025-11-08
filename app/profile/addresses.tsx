@@ -147,7 +147,6 @@ export default function AddressesScreen() {
   }
 
   const handleSubmit = () => {
-    // Validações obrigatórias (para atualização, alguns campos podem ser opcionais)
     if (formData.cep) {
       const cepNumbers = formData.cep.replace(/\D/g, '')
       if (cepNumbers.length !== 8) {
@@ -166,7 +165,6 @@ export default function AddressesScreen() {
       return
     }
 
-    // Validação de tamanhos máximos
     if (formData.apelido && formData.apelido.length > 50) {
       Alert.alert('Erro', 'Apelido deve ter no máximo 50 caracteres.')
       return
@@ -199,12 +197,10 @@ export default function AddressesScreen() {
 
     const dataToUpdate: AtualizarEnderecoReq = { ...formData }
 
-    // Se CEP foi preenchido, enviar apenas números
     if (dataToUpdate.cep) {
       dataToUpdate.cep = dataToUpdate.cep.replace(/\D/g, '')
     }
 
-    // Remover campos vazios opcionais
     if (!dataToUpdate.complemento) {
       delete dataToUpdate.complemento
     }

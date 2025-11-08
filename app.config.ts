@@ -130,8 +130,6 @@ const config: ExpoConfig = {
     env: process.env.NODE_ENV || 'development',
     EXPO_PUBLIC_SECRET_CRYPT: process.env.EXPO_PUBLIC_SECRET_CRYPT,
     EXPO_PUBLIC_BASE_URL: process.env.EXPO_PUBLIC_BASE_URL,
-    EXPO_PUBLIC_CLIENT_ID: process.env.EXPO_PUBLIC_CLIENT_ID,
-    EXPO_PUBLIC_CLIENT_SECRET: process.env.EXPO_PUBLIC_CLIENT_SECRET,
   },
   primaryColor: '#00B2A6',
 }

@@ -9,6 +9,9 @@ import Toast from 'react-native-toast-message'
 import { useFonts } from 'expo-font'
 import * as Notifications from 'expo-notifications'
 import { SystemBars } from 'react-native-edge-to-edge'
+import Constants from 'expo-constants'
+import { CartProvider } from '@/contexts/CartContext'
+import { MannequinProvider } from '@/contexts/MannequinContext'
 
 SplashScreen.preventAutoHideAsync()
 
@@ -17,16 +20,18 @@ SplashScreen.setOptions({
   fade: true,
 })
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => {
-    return {
-      shouldPlaySound: true,
-      shouldSetBadge: true,
-      shouldShowBanner: true,
-      shouldShowList: true,
-    }
-  },
-})
+if (Constants.executionEnvironment !== 'storeClient') {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => {
+      return {
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }
+    },
+  })
+}
 
 export default function RootLayout() {
   const queryClient = new QueryClient({
@@ -68,26 +73,30 @@ export default function RootLayout() {
     <>
       <SystemBars style="dark" />
       <QueryClientProvider client={queryClient}>
-        <SafeAreaProvider>
-          <Stack
-            screenOptions={{
-              animation: 'fade',
-            }}
-          >
-            <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="login" options={{ headerShown: false }} />
-            <Stack.Screen name="register" options={{ headerShown: false }} />
-            <Stack.Screen name="home" options={{ headerShown: false }} />
-            <Stack.Screen name="cart" options={{ headerShown: false }} />
-            <Stack.Screen name="mannequin" options={{ headerShown: false }} />
-            <Stack.Screen
-              name="+not-found"
-              options={{
-                freezeOnBlur: false,
-              }}
-            />
-          </Stack>
-        </SafeAreaProvider>
+        <CartProvider>
+          <MannequinProvider>
+            <SafeAreaProvider>
+              <Stack
+                screenOptions={{
+                  animation: 'fade',
+                }}
+              >
+                <Stack.Screen name="index" options={{ headerShown: false }} />
+                <Stack.Screen name="login" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="register"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen name="home" options={{ headerShown: false }} />
+                <Stack.Screen name="cart" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="mannequin"
+                  options={{ headerShown: false }}
+                />
+              </Stack>
+            </SafeAreaProvider>
+          </MannequinProvider>
+        </CartProvider>
       </QueryClientProvider>
       <Toast position="top" topOffset={50} autoHide visibilityTime={5000} />
     </>

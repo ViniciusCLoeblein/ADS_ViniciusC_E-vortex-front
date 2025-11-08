@@ -25,6 +25,7 @@ import type {
   EnderecoRes,
 } from '@/services/customer/interface'
 import { maskCEP } from '@/constants/masks'
+import { useBackHandler } from '@/hooks/indext'
 
 export default function AddressesScreen() {
   const queryClient = useQueryClient()
@@ -145,6 +146,14 @@ export default function AddressesScreen() {
       handleBackToList()
     }
   }
+
+  useBackHandler(() => {
+    if (currentPage === 1) {
+      handleBackToList()
+      return true
+    }
+    return false
+  })
 
   const handleSubmit = () => {
     if (formData.cep) {

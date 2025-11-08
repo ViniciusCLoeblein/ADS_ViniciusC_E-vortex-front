@@ -29,6 +29,7 @@ import {
   obterProduto,
 } from '@/services/sales'
 import type { ProdutoRes } from '@/services/sales/interface'
+import { useBackHandler } from '@/hooks/indext'
 
 export default function HomeScreen() {
   const [searchText, setSearchText] = useState('')
@@ -175,6 +176,14 @@ export default function HomeScreen() {
       setSelectedProductId(null)
     }
   }
+
+  useBackHandler(() => {
+    if (selectedProductId) {
+      handleBackToList()
+      return true
+    }
+    return false
+  })
 
   const renderProduct = ({ item }: { item: ProdutoRes }) => {
     const isFavorite = favoritosIds.has(item.id)

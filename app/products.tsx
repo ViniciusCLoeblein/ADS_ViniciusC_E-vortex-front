@@ -27,6 +27,7 @@ import {
 } from '@/services/sales'
 import type { ProdutoRes } from '@/services/sales/interface'
 import { useCart } from '@/contexts/CartContext'
+import { useBackHandler } from '@/hooks/indext'
 
 export default function ProductsScreen() {
   const [searchText, setSearchText] = useState('')
@@ -134,6 +135,14 @@ export default function ProductsScreen() {
       setSelectedProductId(null)
     }
   }
+
+  useBackHandler(() => {
+    if (currentPage === 1) {
+      handleBackToList()
+      return true
+    }
+    return false
+  })
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('pt-BR', {

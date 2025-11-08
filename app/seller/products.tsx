@@ -28,6 +28,7 @@ import {
 } from '@/services/sales'
 import { useAuthStore } from '@/stores/auth'
 import type { AtualizarProdutoReq } from '@/services/sales/interface'
+import { useBackHandler } from '@/hooks/indext'
 
 export default function SellerProductsScreen() {
   const { userId } = useAuthStore()
@@ -144,6 +145,14 @@ export default function SellerProductsScreen() {
       setEditingId(null)
     }
   }
+
+  useBackHandler(() => {
+    if (currentPage === 1) {
+      handleBackToList()
+      return true
+    }
+    return false
+  })
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">

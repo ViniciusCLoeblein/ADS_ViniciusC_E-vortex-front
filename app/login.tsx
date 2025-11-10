@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, Link } from 'expo-router'
@@ -59,12 +60,13 @@ export default function LoginScreen() {
         >
           <View className="flex-1 px-6 pt-16">
             <View className="items-center mb-12">
-              <View className="w-20 h-20 bg-frgprimary rounded-full items-center justify-center mb-4">
-                <Ionicons name="storefront" size={40} color="white" />
+              <View className="w-32 h-32 bg-frgprimary rounded-full items-center justify-center mb-4">
+                <Image
+                  source={require('@/assets/images/favicon.png')}
+                  className="w-28 h-28"
+                  resizeMode="contain"
+                />
               </View>
-              <Text className="text-3xl font-bold text-frg900 mb-2">
-                E-Vortex
-              </Text>
               <Text className="text-lg text-system-text text-center">
                 Faça login para continuar
               </Text>

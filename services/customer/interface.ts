@@ -55,23 +55,29 @@ export interface AtualizarEnderecoReq {
 }
 
 export interface CartaoRes {
+  ano_validade: number
+  ativo: boolean
+  bandeira: string
+  criado_em: string
   id: string
-  numero: string
-  nomeTitular: string
-  validade: string
-  cvv?: string
+  mes_validade: number
   principal: boolean
-  usuarioId: string
+  titular: string
+  ultimos_digitos: string
+  uuid: string
 }
 
 export interface ListaCartoesRes {
   cartoes: CartaoRes[]
+  total: number
 }
 
 export interface CriarCartaoReq {
+  titular: string
   numero: string
-  nomeTitular: string
-  validade: string
+  bandeira: string
+  mesValidade: number
+  anoValidade: number
   cvv: string
   principal?: boolean
 }

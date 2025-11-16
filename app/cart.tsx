@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import {
   View,
   Text,
@@ -21,16 +20,24 @@ import {
 
 export default function CartScreen() {
   const queryClient = useQueryClient()
-  const [isProcessing, setIsProcessing] = useState(false)
 
-  const { data: carrinho, isLoading, refetch } = useQuery({
+  const {
+    data: carrinho,
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ['carrinho'],
     queryFn: obterCarrinho,
   })
 
   const updateItemMutation = useMutation({
-    mutationFn: ({ itemId, quantidade }: { itemId: string; quantidade: number }) =>
-      atualizarItemCarrinho(itemId, { quantidade }),
+    mutationFn: ({
+      itemId,
+      quantidade,
+    }: {
+      itemId: string
+      quantidade: number
+    }) => atualizarItemCarrinho(itemId, { quantidade }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['carrinho'] })
     },
@@ -59,7 +66,7 @@ export default function CartScreen() {
     }
   }
 
-  const handleCheckout = async () => {
+  const handleCheckout = () => {
     if (!carrinho || carrinho.itens.length === 0) {
       Alert.alert(
         'Carrinho vazio',
@@ -68,30 +75,7 @@ export default function CartScreen() {
       return
     }
 
-    setIsProcessing(true)
-
-    try {
-      // Simulação de processamento do pedido
-      await new Promise<void>((resolve) => setTimeout(resolve, 2000))
-
-      Alert.alert(
-        'Compra finalizada!',
-        `Pedido de ${formatPrice(carrinho.total)} realizado com sucesso!`,
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              clearCartMutation.mutate()
-              router.replace('/home')
-            },
-          },
-        ],
-      )
-    } catch (error) {
-      Alert.alert('Erro', 'Falha ao processar o pedido. Tente novamente.')
-    } finally {
-      setIsProcessing(false)
-    }
+    router.push('/checkout')
   }
 
   const formatPrice = (price: number) => {
@@ -264,14 +248,11 @@ export default function CartScreen() {
         </View>
 
         <TouchableOpacity
-          className={`bg-frgprimary rounded-xl py-4 ${
-            isProcessing ? 'opacity-70' : ''
-          }`}
+          className="bg-frgprimary rounded-xl py-4"
           onPress={handleCheckout}
-          disabled={isProcessing}
         >
           <Text className="text-white text-center text-lg font-semibold">
-            {isProcessing ? 'Processando...' : 'Finalizar Compra'}
+            Finalizar Compra
           </Text>
         </TouchableOpacity>
       </View>

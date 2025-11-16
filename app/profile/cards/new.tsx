@@ -18,11 +18,14 @@ export default function NewCardScreen() {
   const queryClient = useQueryClient()
   const [formData, setFormData] = useState<CriarCartaoReq>({
     numero: '',
-    nomeTitular: '',
-    validade: '',
+    titular: '',
+    mesValidade: 0,
+    anoValidade: new Date().getFullYear(),
     cvv: '',
     principal: false,
+    bandeira: '',
   })
+  const [validade, setValidade] = useState('')
 
   const createMutation = useMutation({
     mutationFn: criarCartao,
@@ -36,26 +39,66 @@ export default function NewCardScreen() {
     },
   })
 
+  const detectBandeira = (numero: string): string => {
+    const cleaned = numero.replace(/\s/g, '')
+    if (cleaned.startsWith('4')) return 'Visa'
+    if (cleaned.startsWith('5')) return 'Mastercard'
+    if (cleaned.startsWith('3')) return 'American Express'
+    if (cleaned.startsWith('6')) return 'Discover'
+    return 'Cartão Inválido'
+  }
+
   const formatCardNumber = (text: string) => {
     const cleaned = text.replace(/\s/g, '')
     const match = cleaned.match(/.{1,4}/g)
     return match ? match.join(' ') : cleaned
   }
 
-  const formatValidity = (text: string) => {
-    const cleaned = text.replace(/\//g, '')
-    if (cleaned.length >= 2) {
-      return cleaned.slice(0, 2) + '/' + cleaned.slice(2, 4)
+  const formatValidade = (text: string) => {
+    const cleaned = text.replace(/\D/g, '')
+
+    const limited = cleaned.slice(0, 4)
+
+    if (limited.length <= 2) {
+      return limited
+    } else {
+      return limited.slice(0, 2) + '/' + limited.slice(2, 4)
     }
-    return cleaned
+  }
+
+  const handleValidadeChange = (text: string) => {
+    const formatted = formatValidade(text)
+    setValidade(formatted)
+
+    if (formatted.length === 5) {
+      const parts = formatted.split('/')
+      const mes = Number.parseInt(parts[0], 10)
+      const ano = Number.parseInt('20' + parts[1], 10)
+
+      if (mes >= 1 && mes <= 12 && ano >= 2024) {
+        setFormData({
+          ...formData,
+          mesValidade: mes,
+          anoValidade: ano,
+        })
+      }
+    } else {
+      setFormData({
+        ...formData,
+        mesValidade: 0,
+        anoValidade: new Date().getFullYear(),
+      })
+    }
   }
 
   const handleSubmit = () => {
     if (
       !formData.numero ||
-      !formData.nomeTitular ||
-      !formData.validade ||
-      !formData.cvv
+      !formData.titular ||
+      !formData.mesValidade ||
+      !formData.anoValidade ||
+      !formData.cvv ||
+      !formData.bandeira
     ) {
       Alert.alert('Erro', 'Por favor, preencha todos os campos.')
       return
@@ -63,6 +106,14 @@ export default function NewCardScreen() {
 
     if (formData.cvv.length !== 3) {
       Alert.alert('Erro', 'O CVV deve ter 3 dígitos.')
+      return
+    }
+
+    if (!formData.bandeira) {
+      Alert.alert(
+        'Erro',
+        'Não foi possível detectar a bandeira do cartão. Verifique o número do cartão.',
+      )
       return
     }
 
@@ -98,15 +149,29 @@ export default function NewCardScreen() {
                 className="bg-inputbg border border-gray-200 rounded-xl px-4 py-3 text-base"
                 placeholder="0000 0000 0000 0000"
                 value={formData.numero}
-                onChangeText={(text) =>
+                onChangeText={(text) => {
+                  const formatted = formatCardNumber(text)
+                  const bandeira = detectBandeira(formatted)
                   setFormData({
                     ...formData,
-                    numero: formatCardNumber(text),
+                    numero: formatted,
+                    bandeira: bandeira === 'Cartão Inválido' ? '' : bandeira,
                   })
-                }
+                }}
                 keyboardType="numeric"
                 maxLength={19}
               />
+              {formData.numero ? (
+                <Text
+                  className={`text-xs mt-1 ${
+                    formData.bandeira && formData.bandeira !== 'Cartão Inválido'
+                      ? 'text-frgprimary'
+                      : 'text-red-500'
+                  }`}
+                >
+                  {formData.bandeira || detectBandeira(formData.numero)}
+                </Text>
+              ) : null}
             </View>
 
             <View className="mb-4">
@@ -116,9 +181,9 @@ export default function NewCardScreen() {
               <TextInput
                 className="bg-inputbg border border-gray-200 rounded-xl px-4 py-3 text-base"
                 placeholder="Nome como está no cartão"
-                value={formData.nomeTitular}
+                value={formData.titular}
                 onChangeText={(text) =>
-                  setFormData({ ...formData, nomeTitular: text })
+                  setFormData({ ...formData, titular: text })
                 }
                 autoCapitalize="words"
               />
@@ -130,13 +195,8 @@ export default function NewCardScreen() {
                 <TextInput
                   className="bg-inputbg border border-gray-200 rounded-xl px-4 py-3 text-base"
                   placeholder="MM/AA"
-                  value={formData.validade}
-                  onChangeText={(text) =>
-                    setFormData({
-                      ...formData,
-                      validade: formatValidity(text),
-                    })
-                  }
+                  value={validade}
+                  onChangeText={handleValidadeChange}
                   keyboardType="numeric"
                   maxLength={5}
                 />

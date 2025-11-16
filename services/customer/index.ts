@@ -50,6 +50,7 @@ export async function excluirEndereco(id: string): Promise<MessageRes> {
 }
 
 export async function criarCartao(data: CriarCartaoReq): Promise<CartaoRes> {
+  console.log('data', data)
   const response = await axios.post<CartaoRes>('/customer/cartoes', data)
   return response.data
 }

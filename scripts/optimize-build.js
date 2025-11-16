@@ -17,7 +17,7 @@ const configContent = fs.readFileSync(configPath, 'utf8')
 
 const requiredPermissions = ['CAMERA']
 
-const requiredPlugins = ['expo-image-picker', 'expo-camera']
+const requiredPlugins = ['expo-image-picker']
 
 const missingPermissions = []
 const missingPlugins = []
@@ -81,11 +81,10 @@ console.log('📱 Build pronto para produção')
 
 // Verificações finais
 console.log('\n🔍 Verificações finais:')
-console.log('1. Permissões de câmera configuradas (acesso único/pouco frequente)')
-console.log('2. Plugins expo-camera e expo-image-picker configurados')
-console.log('3. Variáveis de ambiente verificadas')
-console.log('4. Caches limpos')
-console.log('5. Configuração de produção aplicada')
+console.log('1. Permissões configuradas')
+console.log('2. Variáveis de ambiente verificadas')
+console.log('3. Caches limpos')
+console.log('4. Configuração de produção aplicada')
 
 console.log('\n🚀 Execute o build com:')
 console.log('npm run build:android')

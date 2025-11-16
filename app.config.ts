@@ -85,13 +85,6 @@ const config: ExpoConfig = {
       },
     ],
     [
-      'expo-camera',
-      {
-        cameraPermission:
-          '$(PRODUCT_NAME) precisa de acesso à câmera para tirar fotos.',
-      },
-    ],
-    [
       'expo-image-picker',
       {
         photosPermission:
@@ -128,10 +121,8 @@ const config: ExpoConfig = {
       projectId: '681001f7-1108-46bc-a9ff-cc62de0de5a5',
     },
     env: process.env.NODE_ENV || 'development',
-    EXPO_PUBLIC_SECRET_CRYPT: process.env.EXPO_PUBLIC_SECRET_CRYPT,
     EXPO_PUBLIC_BASE_URL: process.env.EXPO_PUBLIC_BASE_URL,
   },
-  primaryColor: '#00B2A6',
 }
 
 export default config

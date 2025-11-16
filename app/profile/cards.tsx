@@ -1,10 +1,9 @@
-import { useState } from 'react'
 import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { router } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { listarCartoes, excluirCartao, CartaoRes } from '@/services/customer'
+import { listarCartoes, excluirCartao } from '@/services/customer'
 
 export default function CardsScreen() {
   const queryClient = useQueryClient()
@@ -40,19 +39,7 @@ export default function CardsScreen() {
     )
   }
 
-  const formatCardNumber = (numero: string) => {
-    const cleaned = numero.replace(/\s/g, '')
-    const match = cleaned.match(/.{1,4}/g)
-    return match ? match.join(' ') : cleaned
-  }
-
-  const getCardBrand = (numero: string) => {
-    const cleaned = numero.replace(/\s/g, '')
-    if (cleaned.startsWith('4')) return 'Visa'
-    if (cleaned.startsWith('5')) return 'Mastercard'
-    if (cleaned.startsWith('3')) return 'American Express'
-    return 'Cartão'
-  }
+  console.log('data', data)
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
@@ -96,16 +83,17 @@ export default function CardsScreen() {
                       </View>
                     )}
                     <Text className="text-frg900 font-semibold text-lg mb-1">
-                      {getCardBrand(cartao.numero)}
+                      {cartao.bandeira}
                     </Text>
                     <Text className="text-frg900 font-medium text-base mb-2">
-                      •••• •••• •••• {cartao.numero.slice(-4)}
+                      •••• •••• •••• {cartao.ultimos_digitos ?? '****'}
                     </Text>
                     <Text className="text-system-text text-sm">
-                      {cartao.nomeTitular}
+                      {cartao.titular}
                     </Text>
                     <Text className="text-system-text text-sm">
-                      Válido até {cartao.validade}
+                      Válido até {cartao.mes_validade}/
+                      {String(cartao.ano_validade).slice(-2)}
                     </Text>
                   </View>
                 </View>
@@ -144,4 +132,3 @@ export default function CardsScreen() {
     </SafeAreaView>
   )
 }
-

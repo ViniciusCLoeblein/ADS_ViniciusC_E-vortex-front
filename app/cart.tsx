@@ -191,7 +191,7 @@ export default function CartScreen() {
                     <View className="flex-row items-center justify-between">
                       <View>
                         <Text className="text-frgprimary font-bold text-lg">
-                          {formatPrice(item.subtotal)}
+                          {formatPrice(item.precoUnitario * item.quantidade)}
                         </Text>
                         <Text className="text-system-text text-sm">
                           {formatPrice(item.precoUnitario)} cada

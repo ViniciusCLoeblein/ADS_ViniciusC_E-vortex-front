@@ -98,6 +98,8 @@ export default function RootLayout() {
     'seller/products',
     'seller/products/new',
     'seller/categories',
+    'checkout',
+    'order-success',
   ]
 
   return (

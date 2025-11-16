@@ -3,43 +3,8 @@ export interface MessageRes {
   message: string
 }
 
-// Carrinho
-export interface ItemCarrinhoRes {
-  id: string
-  produtoId: string
-  variacaoId?: string
-  quantidade: number
-  precoUnitario: number
-  subtotal: number
-  produto?: {
-    id: string
-    nome: string
-    imagemPrincipal?: string
-  }
-  variacao?: {
-    id: string
-    nome: string
-    preco: number
-  }
-}
-
-export interface CarrinhoRes {
-  id: string
-  usuarioId: string
-  itens: ItemCarrinhoRes[]
-  total: number
-  quantidadeItens: number
-}
-
-export interface AdicionarItemCarrinhoReq {
-  produtoId: string
-  variacaoId?: string
-  quantidade: number
-}
-
-export interface AtualizarItemCarrinhoReq {
-  quantidade: number
-}
+// Tipo de Imagem
+export type TipoImagem = 'principal' | 'galeria' | 'miniatura'
 
 export interface ProdutoRes {
   id: string
@@ -66,14 +31,6 @@ export interface ProdutoRes {
   updatedAt: string
 }
 
-export interface ProdutoListagemRes {
-  produtos: ProdutoRes[]
-  total: number
-  pagina: number
-  limite: number
-  totalPaginas: number
-}
-
 export interface VariacaoRes {
   id: string
   produtoId: string
@@ -88,11 +45,47 @@ export interface VariacaoRes {
   updatedAt: string
 }
 
+export interface ItemCarrinhoRes {
+  id: string
+  precoUnitario: number
+  produto: ProdutoRes
+  produtoId: string
+  quantidade: number
+  variacao: VariacaoRes | null
+  variacaoId: string | null
+}
+
+export interface CarrinhoRes {
+  id: string
+  usuarioId: string
+  itens: ItemCarrinhoRes[]
+  total: number
+  quantidadeItens: number
+}
+
+export interface AdicionarItemCarrinhoReq {
+  produtoId: string
+  variacaoId?: string
+  quantidade: number
+}
+
+export interface AtualizarItemCarrinhoReq {
+  quantidade: number
+}
+
+export interface ProdutoListagemRes {
+  produtos: ProdutoRes[]
+  total: number
+  pagina: number
+  limite: number
+  totalPaginas: number
+}
+
 export interface ImagemRes {
   id: string
   produtoId: string
   url: string
-  tipo: 'principal' | 'galeria' | 'miniatura'
+  tipo: TipoImagem
   legenda?: string
   ordem: number
   createdAt: string
@@ -223,7 +216,7 @@ export interface ListaImagensRes {
 
 export interface CriarImagemReq {
   produtoId: string
-  tipo: 'principal' | 'galeria' | 'miniatura'
+  tipo: TipoImagem
   legenda?: string
   ordem?: number
   file: {
@@ -237,7 +230,7 @@ export interface ImagemUploadRes {
   id: string
   produtoId: string
   url: string
-  tipo: 'principal' | 'galeria' | 'miniatura'
+  tipo: TipoImagem
   legenda?: string
   ordem: number
   createdAt: string

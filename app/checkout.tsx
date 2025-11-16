@@ -276,22 +276,22 @@ export default function CheckoutScreen() {
     try {
       await new Promise<void>((resolve) => setTimeout(resolve, 2000))
 
-      Alert.alert(
-        'Compra finalizada!',
-        `Pedido de ${formatPrice(carrinho.total)} realizado com sucesso!`,
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              clearCartMutation.mutate()
-              router.replace('/home')
-            },
-          },
-        ],
-      )
+      // Gera um ID de pedido simulado (em produção, viria da API)
+      const pedidoId = `PED-${Date.now().toString().slice(-8)}`
+
+      // Limpa o carrinho
+      clearCartMutation.mutate()
+
+      // Redireciona para a tela de sucesso
+      router.replace({
+        pathname: '/order-success',
+        params: {
+          total: carrinho.total.toString(),
+          pedidoId,
+        },
+      })
     } catch (error) {
       Alert.alert('Erro', 'Falha ao processar o pedido. Tente novamente.')
-    } finally {
       setIsProcessing(false)
     }
   }
@@ -351,7 +351,7 @@ export default function CheckoutScreen() {
           />
         }
       >
-        <View className="px-6 py-4">
+        <View className="px-6 pt-4">
           <View className="mb-6">
             <Text className="text-frg900 font-bold text-lg mb-4">
               Itens do Pedido
@@ -370,6 +370,9 @@ export default function CheckoutScreen() {
                     }}
                     className="w-20 h-20 rounded-xl mr-4"
                     resizeMode="cover"
+                    alt={
+                      item.produto?.nome ? `Imagem de ${item.produto.nome}` : ''
+                    }
                   />
 
                   <View className="flex-1">
@@ -383,7 +386,7 @@ export default function CheckoutScreen() {
                       Quantidade: {item.quantidade}
                     </Text>
                     <Text className="text-frgprimary font-bold text-lg">
-                      {formatPrice(item.subtotal)}
+                      {formatPrice(item.precoUnitario * item.quantidade)}
                     </Text>
                   </View>
                 </View>
@@ -410,8 +413,7 @@ export default function CheckoutScreen() {
             {renderEnderecos()}
           </View>
 
-          {/* Seleção de Cartão */}
-          <View className="mb-6">
+          <View>
             <View className="flex-row items-center justify-between mb-4">
               <Text className="text-frg900 font-bold text-lg">
                 Forma de Pagamento
@@ -430,49 +432,53 @@ export default function CheckoutScreen() {
             {renderCartoes()}
           </View>
 
-          {/* Resumo */}
-          <View className="bg-white rounded-2xl p-4 mb-6">
-            <Text className="text-frg900 font-bold text-lg mb-4">
-              Resumo do Pedido
-            </Text>
-            <View className="flex-row items-center justify-between mb-2">
-              <Text className="text-system-text">Subtotal:</Text>
-              <Text className="text-frg900 font-semibold">
-                {formatPrice(carrinho.total)}
-              </Text>
-            </View>
-            <View className="flex-row items-center justify-between mb-2">
-              <Text className="text-system-text">Frete:</Text>
-              <Text className="text-frg900 font-semibold">R$ 0,00</Text>
-            </View>
-            <View className="border-t border-gray-200 mt-4 pt-4">
-              <View className="flex-row items-center justify-between">
-                <Text className="text-frg900 font-bold text-lg">Total:</Text>
-                <Text className="text-frgprimary font-bold text-xl">
-                  {formatPrice(carrinho.total)}
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          <View className="h-32" />
+          <View className="h-14" />
         </View>
       </ScrollView>
 
-      <View className="bg-white border-t border-gray-200 px-6 py-4">
-        <TouchableOpacity
-          className={`bg-frgprimary rounded-xl py-4 ${
-            isProcessing || !selectedEndereco || !selectedCartao
-              ? 'opacity-50'
-              : ''
-          }`}
-          onPress={handleCheckout}
-          disabled={isProcessing || !selectedEndereco || !selectedCartao}
-        >
-          <Text className="text-white text-center text-lg font-semibold">
-            {getButtonText()}
+      {/* Footer Fixo com Resumo e Botão */}
+      <View className="bg-white border-t border-gray-200 shadow-lg">
+        {/* Resumo */}
+        <View className="px-6 pt-4 pb-2">
+          <Text className="text-frg900 font-bold text-lg mb-3">
+            Resumo do Pedido
           </Text>
-        </TouchableOpacity>
+          <View className="flex-row items-center justify-between mb-2">
+            <Text className="text-system-text">Subtotal:</Text>
+            <Text className="text-frg900 font-semibold">
+              {formatPrice(carrinho.total)}
+            </Text>
+          </View>
+          <View className="flex-row items-center justify-between mb-2">
+            <Text className="text-system-text">Frete:</Text>
+            <Text className="text-frg900 font-semibold">R$ 0,00</Text>
+          </View>
+          <View className="border-t border-gray-200 mt-3 pt-3">
+            <View className="flex-row items-center justify-between">
+              <Text className="text-frg900 font-bold text-lg">Total:</Text>
+              <Text className="text-frgprimary font-bold text-xl">
+                {formatPrice(carrinho.total)}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Botão Finalizar */}
+        <View className="px-6 pb-4 pt-2">
+          <TouchableOpacity
+            className={`bg-frgprimary rounded-xl py-4 ${
+              isProcessing || !selectedEndereco || !selectedCartao
+                ? 'opacity-50'
+                : ''
+            }`}
+            onPress={handleCheckout}
+            disabled={isProcessing || !selectedEndereco || !selectedCartao}
+          >
+            <Text className="text-white text-center text-lg font-semibold">
+              {getButtonText()}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </SafeAreaView>
   )

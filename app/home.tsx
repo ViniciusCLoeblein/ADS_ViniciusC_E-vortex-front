@@ -38,6 +38,10 @@ export default function HomeScreen() {
     null,
   )
   const [quantidade, setQuantidade] = useState(1)
+  const [imageError, setImageError] = useState(false)
+  const [selectedVariacaoId, setSelectedVariacaoId] = useState<string | null>(
+    null,
+  )
   const pagerRef = useRef<PagerView>(null)
   const queryClient = useQueryClient()
   const { setProfile, profile } = useCustomerStore()
@@ -127,6 +131,19 @@ export default function HomeScreen() {
     }
   }, [customerProfile, setProfile])
 
+  useEffect(() => {
+    if (produtoDetalhe) {
+      setImageError(false)
+      setSelectedVariacaoId(null)
+      // Debug: verificar imagens
+      if (produtoDetalhe.imagens && produtoDetalhe.imagens.length > 0) {
+        console.log('Imagens do produto:', produtoDetalhe.imagens)
+      } else {
+        console.log('Produto sem imagens')
+      }
+    }
+  }, [produtoDetalhe])
+
   const getWelcomeMessage = () => {
     if (isLoadingProfile && !isVendedor) return 'Carregando...'
     if (profile) return `Bem-vindo, ${profile.nome}!`
@@ -151,16 +168,23 @@ export default function HomeScreen() {
     }
   }
 
-  const handleAddToCart = (produto: ProdutoRes, qtd?: number) => {
+  const handleAddToCart = (
+    produto: ProdutoRes,
+    qtd?: number,
+    variacaoId?: string | null,
+  ) => {
     addToCartMutation.mutate({
       produtoId: produto.id,
       quantidade: qtd || 1,
+      variacaoId: variacaoId || undefined,
     })
   }
 
   const handleViewProduct = (produtoId: string) => {
     setSelectedProductId(produtoId)
     setQuantidade(1)
+    setImageError(false)
+    setSelectedVariacaoId(null)
     if (pagerRef.current) {
       pagerRef.current.setPage(1)
     }
@@ -168,6 +192,8 @@ export default function HomeScreen() {
 
   const handleBackToList = () => {
     setSelectedProductId(null)
+    setImageError(false)
+    setSelectedVariacaoId(null)
     if (pagerRef.current) {
       pagerRef.current.setPage(0)
     }
@@ -375,7 +401,7 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {!isVendedor && (
+        {!isVendedor && !selectedProductId && (
           <View className="flex-row items-center bg-gray-100 rounded-xl px-4 py-3">
             <Ionicons name="search-outline" size={20} color="#9FABB9" />
             <TextInput
@@ -554,19 +580,52 @@ export default function HomeScreen() {
                   showsVerticalScrollIndicator={false}
                 >
                   <View className="bg-white mb-4">
-                    <Image
-                      source={{
-                        uri:
-                          produtoDetalhe.imagens?.find(
-                            (img) => img?.tipo === 'principal',
-                          )?.url ||
-                          produtoDetalhe.imagens?.[0]?.url ||
-                          'https://via.placeholder.com/400',
-                      }}
-                      className="w-full h-80"
-                      resizeMode="cover"
-                      alt={produtoDetalhe.nome}
-                    />
+                    {(() => {
+                      const imagemPrincipal =
+                        produtoDetalhe.imagens?.find(
+                          (img) => img?.tipo === 'principal',
+                        )?.url || produtoDetalhe.imagens?.[0]?.url
+                      const imageUri =
+                        imagemPrincipal && imagemPrincipal.trim() !== ''
+                          ? imagemPrincipal
+                          : null
+
+                      if (!imageUri || imageError) {
+                        return (
+                          <View className="w-full h-80 bg-gray-200 items-center justify-center">
+                            <Ionicons
+                              name="image-outline"
+                              size={64}
+                              color="#9FABB9"
+                            />
+                            <Text className="text-system-text mt-2">
+                              Sem imagem
+                            </Text>
+                          </View>
+                        )
+                      }
+
+                      return (
+                        <Image
+                          key={`${produtoDetalhe.id}-${imageUri}`}
+                          source={{ uri: imageUri }}
+                          className="w-full h-80"
+                          resizeMode="cover"
+                          alt={produtoDetalhe.nome}
+                          onError={() => {
+                            console.log('Erro ao carregar imagem:', imageUri)
+                            setImageError(true)
+                          }}
+                          onLoad={() => {
+                            console.log(
+                              'Imagem carregada com sucesso:',
+                              imageUri,
+                            )
+                            setImageError(false)
+                          }}
+                        />
+                      )
+                    })()}
                   </View>
 
                   <View className="px-6 mb-6">
@@ -672,35 +731,83 @@ export default function HomeScreen() {
                           <Text className="text-frg900 font-semibold mb-2">
                             Variações
                           </Text>
-                          {produtoDetalhe.variacoes.map((variacao) => (
-                            <View
-                              key={variacao.id}
-                              className="bg-white rounded-xl p-3 mb-2 border border-gray-200"
-                            >
-                              <Text className="text-frg900 font-medium">
-                                {variacao.tipo}: {variacao.valor}
-                              </Text>
-                              <Text className="text-frgprimary font-semibold">
-                                {(() => {
-                                  const add = Number(variacao.precoAdicional)
-                                  return add > 0
-                                    ? `+ ${formatPrice(add)}`
-                                    : formatPrice(0)
-                                })()}
-                              </Text>
-                            </View>
-                          ))}
+                          {produtoDetalhe.variacoes.map((variacao) => {
+                            const isSelected =
+                              selectedVariacaoId === variacao.id
+                            const precoAdicional = Number(
+                              variacao.precoAdicional,
+                            )
+                            const temEstoque = variacao.estoque > 0
+
+                            return (
+                              <TouchableOpacity
+                                key={variacao.id}
+                                className={`rounded-xl p-3 mb-2 border ${
+                                  isSelected
+                                    ? 'bg-frgprimary/10 border-frgprimary'
+                                    : 'bg-white border-gray-200'
+                                } ${!temEstoque ? 'opacity-50' : ''}`}
+                                onPress={() => {
+                                  if (temEstoque) {
+                                    setSelectedVariacaoId(
+                                      isSelected ? null : variacao.id,
+                                    )
+                                  }
+                                }}
+                                disabled={!temEstoque}
+                              >
+                                <View className="flex-row items-center justify-between">
+                                  <View className="flex-1">
+                                    <View className="flex-row items-center gap-2">
+                                      <Text className="text-frg900 font-medium">
+                                        {variacao.tipo}: {variacao.valor}
+                                      </Text>
+                                      {isSelected && (
+                                        <Ionicons
+                                          name="checkmark-circle"
+                                          size={20}
+                                          color="#437C99"
+                                        />
+                                      )}
+                                    </View>
+                                    <View className="flex-row items-center gap-2 mt-1">
+                                      {precoAdicional > 0 && (
+                                        <Text className="text-frgprimary font-semibold">
+                                          + {formatPrice(precoAdicional)}
+                                        </Text>
+                                      )}
+                                      <Text className="text-system-text text-xs">
+                                        Estoque: {variacao.estoque}
+                                      </Text>
+                                    </View>
+                                  </View>
+                                  {!temEstoque && (
+                                    <Text className="text-red-500 text-xs font-medium ml-2">
+                                      Sem estoque
+                                    </Text>
+                                  )}
+                                </View>
+                              </TouchableOpacity>
+                            )
+                          })}
                         </View>
                       )}
 
                     <TouchableOpacity
                       className="bg-frgprimary rounded-xl py-4 mb-4"
                       onPress={() =>
-                        handleAddToCart(produtoDetalhe, quantidade)
+                        handleAddToCart(
+                          produtoDetalhe,
+                          quantidade,
+                          selectedVariacaoId,
+                        )
                       }
                       disabled={
                         addToCartMutation.isPending ||
-                        produtoDetalhe.estoque === 0
+                        produtoDetalhe.estoque === 0 ||
+                        (produtoDetalhe.variacoes &&
+                          produtoDetalhe.variacoes.length > 0 &&
+                          !selectedVariacaoId)
                       }
                     >
                       <Text className="text-white text-center text-lg font-semibold">
@@ -708,6 +815,12 @@ export default function HomeScreen() {
                           if (addToCartMutation.isPending)
                             return 'Adicionando...'
                           if (produtoDetalhe.estoque === 0) return 'Sem estoque'
+                          if (
+                            produtoDetalhe.variacoes &&
+                            produtoDetalhe.variacoes.length > 0 &&
+                            !selectedVariacaoId
+                          )
+                            return 'Selecione uma variação'
                           return 'Adicionar ao Carrinho'
                         })()}
                       </Text>

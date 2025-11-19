@@ -9,32 +9,15 @@ const config: ExpoConfig = {
   backgroundColor: '#FFFFFF',
   scheme: 'evortex',
   userInterfaceStyle: 'automatic',
-  newArchEnabled: false,
   jsEngine: 'hermes',
   platforms: ['ios', 'android'],
   assetBundlePatterns: ['**/*'],
   ios: {
-    supportsTablet: true,
     buildNumber: '1',
     entitlements: {
       'aps-environment': 'production',
     },
-    infoPlist: {
-      UIBackgroundModes: ['fetch', 'remote-notification'],
-      NSLocationWhenInUseUsageDescription:
-        'Usamos sua localização para mostrar sua posição no mapa e exibir lojas próximas enquanto o app estiver em uso.',
-      NSPhotoLibraryUsageDescription:
-        'Pedimos acesso à galeria para que você selecione imagens de documentos e envie no app.',
-      NSCameraUsageDescription:
-        'A câmera é usada para capturar fotos de documentos diretamente pelo app.',
-      NSUserNotificationUsageDescription:
-        'Usamos as notificações para manter você informado sobre pagamentos, promoções exclusivas, status de pedidos e ofertas personalizadas. Você pode desativar a qualquer momento nas configurações.',
-      ITSAppUsesNonExemptEncryption: false,
-    },
     bundleIdentifier: 'br.com.evortex.app',
-  },
-  runtimeVersion: {
-    policy: 'appVersion',
   },
   android: {
     versionCode: 1,
@@ -101,14 +84,6 @@ const config: ExpoConfig = {
         },
       },
     ],
-    [
-      'expo-build-properties',
-      {
-        ios: {
-          useFrameworks: 'static',
-        },
-      },
-    ],
   ],
   experiments: {
     typedRoutes: true,
@@ -118,7 +93,7 @@ const config: ExpoConfig = {
       origin: false,
     },
     eas: {
-      projectId: '681001f7-1108-46bc-a9ff-cc62de0de5a5',
+      projectId: '84a84c92-4dc2-4488-a74f-cf2cb8a850c2',
     },
     env: process.env.NODE_ENV || 'development',
     EXPO_PUBLIC_BASE_URL: process.env.EXPO_PUBLIC_BASE_URL,

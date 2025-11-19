@@ -9,31 +9,28 @@
       "distribution": "internal",
       "ios": {
         "resourceClass": "m-medium"
-      },
-      "channel": "development"
+      }
     },
     "preview": {
       "distribution": "internal",
-      "android": {
-        "buildType": "apk"
-      },
       "ios": {
         "resourceClass": "m-medium"
-      },
-      "channel": "preview"
+      }
     },
     "production": {
       "developmentClient": false,
-      "distribution": "internal",
+      "distribution": "store",
       "android": {
-        "buildType": "app-bundle",
+        "gradleCommand": ":app:bundleRelease",
         "credentialsSource": "local"
       },
       "ios": {
         "resourceClass": "m-medium",
         "buildConfiguration": "Release"
       },
-      "channel": "production"
+      "env": {
+        "NODE_ENV": "production"
+      }
     }
   },
   "submit": {

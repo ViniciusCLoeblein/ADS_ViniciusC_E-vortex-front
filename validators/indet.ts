@@ -21,14 +21,6 @@ export const validatorPassword = z
     message: 'A senha não pode conter padrões repetitivos',
   })
 
-const MIN_AGE = 21
-const today = new Date()
-const minBirthDate = new Date(
-  today.getFullYear() - MIN_AGE,
-  today.getMonth(),
-  today.getDate(),
-)
-
 export const validatorPaymentDay = z
   .string()
   .min(1, 'Dia inválido')

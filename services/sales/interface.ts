@@ -6,43 +6,34 @@ export interface MessageRes {
 // Tipo de Imagem
 export type TipoImagem = 'principal' | 'galeria' | 'miniatura'
 
-export interface ProdutoRes {
-  id: string
-  nome: string
-  descricao?: string
-  preco: number
-  precoPromocional?: number
-  categoriaId: string
-  categoria?: {
-    id: string
-    nome: string
-  }
-  vendedorId: string
-  vendedor?: {
-    id: string
-    nome: string
-  }
-  imagemPrincipal?: string
-  imagens?: string[]
-  estoque: number
-  ativo: boolean
-  favoritado?: boolean
-  createdAt: string
-  updatedAt: string
-}
-
 export interface VariacaoRes {
   id: string
-  produtoId: string
-  nome: string
-  descricao?: string
-  preco: number
-  precoPromocional?: number
+  tipo: string
+  valor: string
+  sku: string
+  precoAdicional: string
   estoque: number
-  sku?: string
-  ativa: boolean
-  createdAt: string
-  updatedAt: string
+}
+
+export interface ImagemRes {
+  id: string
+  url: string
+  tipo: string
+  legenda: string
+}
+
+export interface ProdutoRes {
+  id: string
+  uuid: string
+  nome: string
+  descricaoCurta: string
+  preco: string
+  precoPromocional: string
+  avaliacaoMedia: string
+  totalAvaliacoes: number
+  estoque: number
+  variacoes: VariacaoRes[]
+  imagens: ImagemRes[]
 }
 
 export interface ItemCarrinhoRes {
@@ -81,19 +72,9 @@ export interface ProdutoListagemRes {
   totalPaginas: number
 }
 
-export interface ImagemRes {
-  id: string
-  produtoId: string
-  url: string
-  tipo: TipoImagem
-  legenda?: string
-  ordem: number
-  createdAt: string
-}
-
 export interface ProdutoDetalheRes extends ProdutoRes {
-  variacoes?: VariacaoRes[]
-  imagens?: ImagemRes['url'][]
+  variacoes: VariacaoRes[]
+  imagens: ImagemRes[]
 }
 
 export interface CriarProdutoReq {

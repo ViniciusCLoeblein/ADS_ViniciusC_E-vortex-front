@@ -133,11 +133,14 @@ export default function HomeScreen() {
     return 'Bem-vindo de volta!'
   }
 
-  const formatPrice = (price: number) => {
+  const formatPrice = (price: number | string) => {
+    const value =
+      typeof price === 'string' ? Number(price.replace(',', '.')) : price
+    const safe = Number.isFinite(value) ? value : 0
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
-    }).format(price)
+    }).format(safe)
   }
 
   const handleToggleFavorite = (produtoId: string) => {
@@ -187,8 +190,19 @@ export default function HomeScreen() {
 
   const renderProduct = ({ item }: { item: ProdutoRes }) => {
     const isFavorite = favoritosIds.has(item.id)
-    const precoFinal = item.precoPromocional || item.preco
-    const temDesconto = !!item.precoPromocional
+    const preco = Number(item.preco)
+    const promo = Number(item.precoPromocional)
+    const temDesconto =
+      Number.isFinite(preco) &&
+      Number.isFinite(promo) &&
+      promo > 0 &&
+      promo < preco
+    const precoFinal = temDesconto ? promo : preco
+
+    const principal =
+      item.imagens?.find((img) => img?.tipo === 'principal')?.url ||
+      item.imagens?.[0]?.url
+    const imageUrl = principal || ''
 
     return (
       <TouchableOpacity
@@ -198,7 +212,7 @@ export default function HomeScreen() {
         <View className="relative">
           <Image
             source={{
-              uri: item.imagemPrincipal || 'https://via.placeholder.com/200',
+              uri: imageUrl,
             }}
             className="w-full h-32 rounded-xl mb-3"
             resizeMode="cover"
@@ -207,7 +221,11 @@ export default function HomeScreen() {
           {temDesconto && (
             <View className="absolute top-2 left-2 bg-red-500 px-2 py-1 rounded-lg">
               <Text className="text-white text-xs font-bold">
-                -{Math.round(((item.preco - precoFinal) / item.preco) * 100)}%
+                -
+                {Number.isFinite(preco) && preco > 0
+                  ? Math.round(((preco - precoFinal) / preco) * 100)
+                  : 0}
+                %
               </Text>
             </View>
           )}
@@ -539,7 +557,10 @@ export default function HomeScreen() {
                     <Image
                       source={{
                         uri:
-                          produtoDetalhe.imagemPrincipal ||
+                          produtoDetalhe.imagens?.find(
+                            (img) => img?.tipo === 'principal',
+                          )?.url ||
+                          produtoDetalhe.imagens?.[0]?.url ||
                           'https://via.placeholder.com/400',
                       }}
                       className="w-full h-80"
@@ -571,9 +592,9 @@ export default function HomeScreen() {
                       </TouchableOpacity>
                     </View>
 
-                    {produtoDetalhe.descricao && (
+                    {produtoDetalhe.descricaoCurta && (
                       <Text className="text-system-text text-base mb-4">
-                        {produtoDetalhe.descricao}
+                        {produtoDetalhe.descricaoCurta}
                       </Text>
                     )}
 
@@ -581,23 +602,38 @@ export default function HomeScreen() {
                       <View className="flex-1">
                         <Text className="text-frgprimary font-bold text-3xl">
                           {formatPrice(
-                            produtoDetalhe.precoPromocional ||
-                              produtoDetalhe.preco,
+                            (() => {
+                              const preco = Number(produtoDetalhe.preco)
+                              const promo = Number(
+                                produtoDetalhe.precoPromocional,
+                              )
+                              if (
+                                Number.isFinite(preco) &&
+                                Number.isFinite(promo) &&
+                                promo > 0 &&
+                                promo < preco
+                              ) {
+                                return promo
+                              }
+                              return preco
+                            })(),
                           )}
                         </Text>
-                        {produtoDetalhe.precoPromocional && (
+                        {(() => {
+                          const preco = Number(produtoDetalhe.preco)
+                          const promo = Number(produtoDetalhe.precoPromocional)
+                          return (
+                            Number.isFinite(preco) &&
+                            Number.isFinite(promo) &&
+                            promo > 0 &&
+                            promo < preco
+                          )
+                        })() && (
                           <Text className="text-system-text text-lg line-through">
                             {formatPrice(produtoDetalhe.preco)}
                           </Text>
                         )}
                       </View>
-                      {produtoDetalhe.categoria && (
-                        <View className="bg-frgprimary/10 rounded-full px-4 py-2">
-                          <Text className="text-frgprimary font-medium">
-                            {produtoDetalhe.categoria.nome}
-                          </Text>
-                        </View>
-                      )}
                     </View>
 
                     <View className="bg-gray-100 rounded-xl p-4 mb-4">
@@ -642,10 +678,15 @@ export default function HomeScreen() {
                               className="bg-white rounded-xl p-3 mb-2 border border-gray-200"
                             >
                               <Text className="text-frg900 font-medium">
-                                {variacao.nome}
+                                {variacao.tipo}: {variacao.valor}
                               </Text>
                               <Text className="text-frgprimary font-semibold">
-                                {formatPrice(variacao.preco)}
+                                {(() => {
+                                  const add = Number(variacao.precoAdicional)
+                                  return add > 0
+                                    ? `+ ${formatPrice(add)}`
+                                    : formatPrice(0)
+                                })()}
                               </Text>
                             </View>
                           ))}

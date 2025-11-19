@@ -6,9 +6,9 @@ const config: ExpoConfig = {
   version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/images/favicon.png',
-  backgroundColor: '#FFFFFF',
+  backgroundColor: '#000000',
   scheme: 'evortex',
-  userInterfaceStyle: 'automatic',
+  userInterfaceStyle: 'dark',
   jsEngine: 'hermes',
   platforms: ['ios', 'android'],
   assetBundlePatterns: ['**/*'],
@@ -21,14 +21,14 @@ const config: ExpoConfig = {
   },
   android: {
     versionCode: 1,
-    permissions: ['RECEIVE_BOOT_COMPLETED', 'VIBRATE', 'CAMERA'],
+    permissions: ['INTERNET', 'RECEIVE_BOOT_COMPLETED', 'VIBRATE', 'CAMERA'],
     adaptiveIcon: {
       foregroundImage: './assets/images/favicon.png',
-      backgroundColor: '#FFFFFF',
+      backgroundColor: '#000000',
     },
     splash: {
       image: './assets/images/favicon.png',
-      backgroundColor: '#FFFFFF',
+      backgroundColor: '#000000',
       dark: {
         image: './assets/images/favicon.png',
         backgroundColor: '#000000',
@@ -50,7 +50,7 @@ const config: ExpoConfig = {
       'expo-notifications',
       {
         icon: './assets/images/favicon.png',
-        color: '#FFFFFF',
+        color: '#000000',
         enableBackgroundRemoteNotifications: true,
         androidMode: 'default',
         iosDisplayInForeground: true,
@@ -60,11 +60,7 @@ const config: ExpoConfig = {
       'expo-splash-screen',
       {
         image: './assets/images/favicon.png',
-        backgroundColor: '#FFFFFF',
-        dark: {
-          image: './assets/images/favicon.png',
-          backgroundColor: '#000000',
-        },
+        backgroundColor: '#000000',
       },
     ],
     [
@@ -81,6 +77,14 @@ const config: ExpoConfig = {
       {
         android: {
           parentTheme: 'Default',
+        },
+      },
+    ],
+    [
+      'expo-build-properties',
+      {
+        android: {
+          usesCleartextTraffic: true,
         },
       },
     ],

@@ -27,6 +27,9 @@ instance.interceptors.response.use(
   (e) => {
     let msgToast: string
     let msgError: string
+    const isNetworkError =
+      (e?.code && `${e.code}`.toUpperCase() === 'ERR_NETWORK') ||
+      /network/i.test(e?.message || '')
 
     if (!ENV.BASE_URL) {
       const error = 'URL base não configurada'
@@ -53,12 +56,14 @@ instance.interceptors.response.use(
       msgError = e.response?.data?.message ?? ''
       msgToast = status ? status() : handleGenericError()
     } else {
-      msgToast = 'Erro desconhecido'
-      msgError = 'Erro desconhecido'
+      msgToast = isNetworkError
+        ? 'Falha de rede. Verifique conexão/HTTPS ou cleartext no Android.'
+        : 'Erro desconhecido'
+      msgError = e?.message || 'Erro desconhecido'
     }
 
     if (msgToast) {
-      toast.error('Ocorreu um erro!', msgToast)
+      toast.error('Ocorreu um erro!', `${ENV?.BASE_URL} - ${msgToast}`)
     }
 
     return Promise.reject(new Error(msgError))

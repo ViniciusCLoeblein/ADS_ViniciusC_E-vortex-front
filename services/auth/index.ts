@@ -15,11 +15,8 @@ export async function login(payload: LoginReq): Promise<LoginRes> {
 export async function registerCustomer(
   payload: RegisterCustomerReq,
 ): Promise<{ success: boolean; message: string }> {
-  await axios.post('/auth/register', payload)
-  return {
-    success: true,
-    message: 'Cliente registrado com sucesso!',
-  }
+  const response = await axios.post('/auth/register', payload)
+  return response.data
 }
 
 export async function registerSeller(

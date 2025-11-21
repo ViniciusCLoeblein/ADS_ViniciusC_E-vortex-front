@@ -135,12 +135,6 @@ export default function HomeScreen() {
     if (produtoDetalhe) {
       setImageError(false)
       setSelectedVariacaoId(null)
-      // Debug: verificar imagens
-      if (produtoDetalhe.imagens && produtoDetalhe.imagens.length > 0) {
-        console.log('Imagens do produto:', produtoDetalhe.imagens)
-      } else {
-        console.log('Produto sem imagens')
-      }
     }
   }, [produtoDetalhe])
 
@@ -467,7 +461,6 @@ export default function HomeScreen() {
           initialPage={0}
           onPageSelected={handlePageSelected}
         >
-          {/* Página 0: Home com produtos */}
           <View key="0" style={{ flex: 1 }}>
             <ScrollView
               className="flex-1"
@@ -544,7 +537,6 @@ export default function HomeScreen() {
             </ScrollView>
           </View>
 
-          {/* Página 1: Detalhes do produto */}
           <View key="1" style={{ flex: 1 }}>
             {(() => {
               if (isLoadingDetalhe) {

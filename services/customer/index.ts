@@ -9,6 +9,9 @@ import {
   CriarEnderecoReq,
   AtualizarEnderecoReq,
   CriarCartaoReq,
+  CriarPedidoReq,
+  PedidoDetalheRes,
+  ListaPedidosRes,
 } from './interface'
 
 export async function getCustomerProfile(): Promise<CustomerProfileRes> {
@@ -62,5 +65,22 @@ export async function listarCartoes(): Promise<ListaCartoesRes> {
 
 export async function excluirCartao(id: string): Promise<MessageRes> {
   const response = await axios.delete<MessageRes>(`/customer/cartoes/${id}`)
+  return response.data
+}
+
+export async function criarPedido(
+  data: CriarPedidoReq,
+): Promise<PedidoDetalheRes> {
+  const response = await axios.post<PedidoDetalheRes>('/customer/pedidos', data)
+  return response.data
+}
+
+export async function listarPedidos(): Promise<ListaPedidosRes> {
+  const response = await axios.get<ListaPedidosRes>('/customer/pedidos')
+  return response.data
+}
+
+export async function obterPedido(id: string): Promise<PedidoDetalheRes> {
+  const response = await axios.get<PedidoDetalheRes>(`/customer/pedidos/${id}`)
   return response.data
 }

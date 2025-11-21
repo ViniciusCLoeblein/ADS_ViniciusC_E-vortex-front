@@ -94,7 +94,7 @@ export default function ProfileScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity
-                className="bg-white rounded-2xl p-4 mb-6 shadow-sm flex-row items-center justify-between"
+                className="bg-white rounded-2xl p-4 mb-4 shadow-sm flex-row items-center justify-between"
                 onPress={() => router.push('/profile/cards')}
               >
                 <View className="flex-row items-center">
@@ -107,6 +107,26 @@ export default function ProfileScreen() {
                     </Text>
                     <Text className="text-system-text text-sm">
                       Adicionar ou remover cartões de crédito
+                    </Text>
+                  </View>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#9FABB9" />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                className="bg-white rounded-2xl p-4 mb-6 shadow-sm flex-row items-center justify-between"
+                onPress={() => router.push('/profile/orders')}
+              >
+                <View className="flex-row items-center">
+                  <View className="bg-frgprimary/10 rounded-full p-3 mr-4">
+                    <Ionicons name="receipt-outline" size={24} color="#437C99" />
+                  </View>
+                  <View>
+                    <Text className="text-frg900 font-semibold text-base">
+                      Meus Pedidos
+                    </Text>
+                    <Text className="text-system-text text-sm">
+                      Ver histórico de pedidos
                     </Text>
                   </View>
                 </View>

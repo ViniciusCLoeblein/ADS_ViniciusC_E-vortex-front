@@ -8,7 +8,7 @@ const config: ExpoConfig = {
   icon: './assets/images/favicon.png',
   backgroundColor: '#000000',
   scheme: 'evortex',
-  userInterfaceStyle: 'dark',
+  userInterfaceStyle: 'light',
   jsEngine: 'hermes',
   platforms: ['ios', 'android'],
   assetBundlePatterns: ['**/*'],

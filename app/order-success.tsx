@@ -58,11 +58,7 @@ export default function OrderSuccessScreen() {
 
           <TouchableOpacity
             className="bg-white border-2 border-frgprimary rounded-xl py-4"
-            onPress={() => {
-              // TODO: Implementar navegação para acompanhar pedido
-              // Por enquanto, redireciona para o perfil onde pode ter uma seção de pedidos
-              router.push('/profile')
-            }}
+            onPress={() => router.push('/profile/orders')}
           >
             <Text className="text-frgprimary text-center text-lg font-semibold">
               Acompanhar Pedido
@@ -73,4 +69,3 @@ export default function OrderSuccessScreen() {
     </SafeAreaView>
   )
 }
-

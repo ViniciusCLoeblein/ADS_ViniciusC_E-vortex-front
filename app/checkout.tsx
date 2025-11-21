@@ -13,7 +13,11 @@ import { Ionicons } from '@expo/vector-icons'
 import { router } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { obterCarrinho, limparCarrinho } from '@/services/sales'
-import { listarEnderecos, listarCartoes } from '@/services/customer'
+import {
+  listarEnderecos,
+  listarCartoes,
+  criarPedido,
+} from '@/services/customer'
 import { EnderecoRes } from '@/services/customer/interface'
 
 export default function CheckoutScreen() {
@@ -48,7 +52,24 @@ export default function CheckoutScreen() {
     },
   })
 
-  // Seleciona automaticamente o endereço e cartão principais se existirem
+  const criarPedidoMutation = useMutation({
+    mutationFn: criarPedido,
+    onSuccess: (pedido) => {
+      clearCartMutation.mutate()
+
+      router.replace({
+        pathname: '/order-success',
+        params: {
+          total: carrinho?.total.toString() || '0',
+          pedidoId: pedido?.id || '',
+        },
+      })
+    },
+    onError: () => {
+      Alert.alert('Erro', 'Falha ao criar o pedido. Tente novamente.')
+    },
+  })
+
   useEffect(() => {
     if (
       enderecosData?.enderecos &&
@@ -274,23 +295,22 @@ export default function CheckoutScreen() {
     setIsProcessing(true)
 
     try {
-      await new Promise<void>((resolve) => setTimeout(resolve, 2000))
+      const itens = carrinho.itens.map((item) => ({
+        produtoId: item.produtoId,
+        variacaoId: item.variacaoId || undefined,
+        quantidade: item.quantidade,
+      }))
 
-      // Gera um ID de pedido simulado (em produção, viria da API)
-      const pedidoId = `PED-${Date.now().toString().slice(-8)}`
-
-      // Limpa o carrinho
-      clearCartMutation.mutate()
-
-      // Redireciona para a tela de sucesso
-      router.replace({
-        pathname: '/order-success',
-        params: {
-          total: carrinho.total.toString(),
-          pedidoId,
-        },
+      await criarPedidoMutation.mutateAsync({
+        enderecoEntregaId: selectedEndereco!,
+        cartaoCreditoId: selectedCartao || undefined,
+        metodoPagamento: 'cartao',
+        frete: 0,
+        desconto: 0,
+        itens,
       })
     } catch (error) {
+      console.error('Erro ao criar pedido:', error)
       Alert.alert('Erro', 'Falha ao processar o pedido. Tente novamente.')
       setIsProcessing(false)
     }
@@ -363,11 +383,7 @@ export default function CheckoutScreen() {
               >
                 <View className="flex-row">
                   <Image
-                    source={{
-                      uri:
-                        item.produto?.imagemPrincipal ||
-                        'https://via.placeholder.com/100',
-                    }}
+                    source={{ uri: item.produto?.imagens?.[0]?.url || '' }}
                     className="w-20 h-20 rounded-xl mr-4"
                     resizeMode="cover"
                     alt={
@@ -436,9 +452,7 @@ export default function CheckoutScreen() {
         </View>
       </ScrollView>
 
-      {/* Footer Fixo com Resumo e Botão */}
       <View className="bg-white border-t border-gray-200 shadow-lg">
-        {/* Resumo */}
         <View className="px-6 pt-4 pb-2">
           <Text className="text-frg900 font-bold text-lg mb-3">
             Resumo do Pedido
@@ -463,7 +477,6 @@ export default function CheckoutScreen() {
           </View>
         </View>
 
-        {/* Botão Finalizar */}
         <View className="px-6 pb-4 pt-2">
           <TouchableOpacity
             className={`bg-frgprimary rounded-xl py-4 ${

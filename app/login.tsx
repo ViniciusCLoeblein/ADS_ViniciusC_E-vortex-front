@@ -21,7 +21,7 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
-  const setAuth = useAuthStore((state) => state.setAuth)
+  const { setAuth } = useAuthStore()
 
   const { mutate: mutateLogin, isPending } = useMutation({
     mutationFn: login,
@@ -49,7 +49,7 @@ export default function LoginScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-gray-100/90">
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         className="flex-1"
@@ -60,26 +60,27 @@ export default function LoginScreen() {
         >
           <View className="flex-1 px-6 pt-16">
             <View className="items-center mb-12">
-              <View className="w-32 h-32 bg-frgprimary rounded-full items-center justify-center mb-4">
+              <View className="w-32 h-32 bg-frgprimary/30 rounded-full items-center justify-center mb-4 border-2 border-frgprimary/30">
                 <Image
-                  source={require('@/assets/images/favicon.png')}
+                  source={require('@/assets/images/favicon2.png')}
                   className="w-28 h-28"
                   resizeMode="contain"
+                  alt="E-Vortex Logo"
                 />
               </View>
-              <Text className="text-lg text-system-text text-center">
+              <Text className="text-lg text-gray-900 text-center">
                 Faça login para continuar
               </Text>
             </View>
 
             <View className="gap-6">
               <View>
-                <Text className="text-frg900 font-medium mb-2">Email</Text>
+                <Text className="text-black font-medium mb-2">Email</Text>
                 <View className="relative">
                   <TextInput
-                    className="bg-inputbg border border-gray-200 rounded-xl px-4 py-4 text-base"
+                    className="bg-gray-300 border border-gray-400 rounded-xl px-4 py-4 text-base text-black"
                     placeholder="Digite seu email"
-                    placeholderTextColor="#9FABB9"
+                    placeholderTextColor="#6B7280"
                     value={email}
                     onChangeText={setEmail}
                     keyboardType="email-address"
@@ -89,19 +90,19 @@ export default function LoginScreen() {
                   <Ionicons
                     name="mail-outline"
                     size={20}
-                    color="#9FABB9"
+                    color="#6B7280"
                     style={{ position: 'absolute', right: 16, top: 16 }}
                   />
                 </View>
               </View>
 
               <View className="mt-1">
-                <Text className="text-frg900 font-medium mb-2">Senha</Text>
+                <Text className="text-black font-medium mb-2">Senha</Text>
                 <View className="relative">
                   <TextInput
-                    className="bg-inputbg border border-gray-200 rounded-xl px-4 py-4 text-base pr-12"
+                    className="bg-gray-300 border border-gray-400 rounded-xl px-4 py-4 text-base pr-12 text-black"
                     placeholder="Digite sua senha"
-                    placeholderTextColor="#9FABB9"
+                    placeholderTextColor="#6B7280"
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry={!showPassword}
@@ -115,7 +116,7 @@ export default function LoginScreen() {
                     <Ionicons
                       name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                       size={20}
-                      color="#9FABB9"
+                      color="#6B7280"
                     />
                   </TouchableOpacity>
                 </View>
@@ -141,7 +142,7 @@ export default function LoginScreen() {
             </View>
 
             <View className="flex-row mt-auto mb-8 items-center justify-center">
-              <Text className="text-system-text">
+              <Text className="text-gray-400">
                 Não tem uma conta?{' '}
                 <Link className="text-frgprimary font-medium" href="/register">
                   Cadastre-se

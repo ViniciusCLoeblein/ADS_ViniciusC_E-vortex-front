@@ -85,3 +85,63 @@ export interface CriarCartaoReq {
 export interface MessageRes {
   message: string
 }
+
+export interface ItemCriarPedidoReq {
+  produtoId: string
+  variacaoId?: string
+  quantidade: number
+}
+
+export interface CriarPedidoReq {
+  enderecoEntregaId: string
+  cartaoCreditoId?: string
+  metodoPagamento: string
+  frete: number
+  desconto?: number
+  itens: ItemCriarPedidoReq[]
+}
+
+export interface PedidoItemRes {
+  id: string
+  pedido_id: string
+  produto_id: string
+  variacao_id: string
+  quantidade: number
+  preco_unitario: string
+  nome_produto: string
+  variacao_descricao: string
+}
+
+export interface PedidoRes {
+  id: string
+  uuid: string
+  usuario_id: string
+  endereco_entrega_id: string
+  cartao_credito_id: string
+  status: string
+  subtotal: string
+  desconto: number
+  frete: number
+  total: number
+  metodo_pagamento: string
+  dados_pagamento: string | null
+  codigo_rastreamento: string | null
+  transportadora: string | null
+  previsao_entrega: string | null
+  data_pagamento: string | null
+  data_envio: string | null
+  data_entrega: string | null
+  data_cancelamento: string | null
+  motivo_cancelamento: string | null
+  criado_em: string
+  atualizado_em: string
+}
+
+export interface PedidoDetalheRes extends PedidoRes {
+  itens: PedidoItemRes[]
+}
+
+export interface ListaPedidosRes {
+  pedidos: PedidoRes[]
+  total: number
+}

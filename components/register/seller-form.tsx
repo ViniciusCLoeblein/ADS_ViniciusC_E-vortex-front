@@ -1,5 +1,12 @@
 import { useState } from 'react'
-import { View, Text, TextInput, TouchableOpacity, Alert } from 'react-native'
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+} from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useMutation } from '@tanstack/react-query'
 import {
@@ -11,6 +18,7 @@ import {
 } from '@/lib/utils'
 import { registerSeller } from '@/services/auth'
 import type { RegisterSellerReq } from '@/services/auth/interface'
+import { buscarCnpj } from '@/services/brasilapi'
 
 interface SellerFormProps {
   onSuccess: (credentials?: { email: string; password: string }) => void
@@ -19,6 +27,7 @@ interface SellerFormProps {
 export default function SellerForm({ onSuccess }: SellerFormProps) {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [isLoadingCnpj, setIsLoadingCnpj] = useState(false)
 
   const [form, setForm] = useState<SellerFormData>({
     name: '',
@@ -32,6 +41,32 @@ export default function SellerForm({ onSuccess }: SellerFormProps) {
     tradeName: '',
     stateRegistration: '',
   })
+
+  const handleCnpjChange = async (text: string) => {
+    const formatted = formatCNPJ(text)
+    setForm({ ...form, cnpj: formatted })
+
+    // Buscar CNPJ quando tiver 14 dígitos
+    const cnpjNumbers = formatted.replace(/\D/g, '')
+    if (cnpjNumbers.length === 14) {
+      setIsLoadingCnpj(true)
+      try {
+        const cnpjData = await buscarCnpj(cnpjNumbers)
+        setForm((prev) => ({
+          ...prev,
+          cnpj: formatted,
+          companyName: cnpjData.razao_social || prev.companyName,
+          tradeName: cnpjData.nome_fantasia || prev.tradeName,
+        }))
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : 'Erro ao buscar CNPJ'
+        Alert.alert('Aviso', errorMessage)
+      } finally {
+        setIsLoadingCnpj(false)
+      }
+    }
+  }
 
   const registerSellerMutation = useMutation({
     mutationFn: registerSeller,
@@ -152,16 +187,24 @@ export default function SellerForm({ onSuccess }: SellerFormProps) {
       </View>
 
       <View>
-        <Text className="text-frg900 font-medium mb-2">CNPJ</Text>
+        <View className="flex-row items-center justify-between mb-2">
+          <Text className="text-frg900 font-medium">CNPJ</Text>
+          {isLoadingCnpj && (
+            <ActivityIndicator size="small" color="#437C99" />
+          )}
+        </View>
         <TextInput
           className="bg-inputbg border border-gray-200 rounded-xl px-4 py-4 text-base"
           placeholder="00.000.000/0000-00"
           placeholderTextColor="#9FABB9"
           value={form.cnpj}
-          onChangeText={(text) => setForm({ ...form, cnpj: formatCNPJ(text) })}
+          onChangeText={handleCnpjChange}
           keyboardType="numeric"
           maxLength={18}
         />
+        <Text className="text-gray-500 text-xs mt-1">
+          Preenchimento automático ao digitar 14 dígitos
+        </Text>
       </View>
 
       <View>

@@ -21,6 +21,7 @@ import {
   ListaImagensRes,
   CriarImagemReq,
   ImagemUploadRes,
+  VendedorPublicoRes,
 } from './interface'
 
 export async function obterCarrinho(): Promise<CarrinhoRes> {
@@ -97,6 +98,11 @@ export async function removerFavorito(produtoId: string): Promise<MessageRes> {
   const response = await axios.delete<MessageRes>(
     `/sales/favoritos/${produtoId}`,
   )
+  return response.data
+}
+
+export async function removerTodosFavoritos(): Promise<MessageRes> {
+  const response = await axios.delete<MessageRes>('/sales/favoritos')
   return response.data
 }
 
@@ -212,5 +218,21 @@ export async function listarImagensProduto(
 
 export async function excluirImagem(id: string): Promise<MessageRes> {
   const response = await axios.delete<MessageRes>(`/sales/imagens/${id}`)
+  return response.data
+}
+
+export async function obterVendedor(id: string): Promise<VendedorPublicoRes> {
+  const response = await axios.get<VendedorPublicoRes>(
+    `/sales/vendedores/${id}`,
+  )
+  return response.data
+}
+
+export async function obterVendedorUsuario(
+  usuarioId: string,
+): Promise<VendedorPublicoRes> {
+  const response = await axios.get<VendedorPublicoRes>(
+    `/sales/vendedores/usuario/${usuarioId}`,
+  )
   return response.data
 }

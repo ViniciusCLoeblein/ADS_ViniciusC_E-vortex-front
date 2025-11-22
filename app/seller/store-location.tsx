@@ -8,6 +8,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
@@ -16,9 +17,11 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { criarEndereco } from '@/services/customer'
 import { CriarEnderecoReq } from '@/services/customer/interface'
 import { maskCEP } from '@/constants/masks'
+import { buscarCep } from '@/services/brasilapi'
 
 export default function StoreLocationScreen() {
   const queryClient = useQueryClient()
+  const [isLoadingCep, setIsLoadingCep] = useState(false)
   const [formData, setFormData] = useState<CriarEnderecoReq>({
     apelido: 'Localização da Loja',
     cep: '',
@@ -31,6 +34,33 @@ export default function StoreLocationScreen() {
     pais: 'BR',
     principal: true,
   })
+
+  const handleCepChange = async (text: string) => {
+    const masked = maskCEP(text)
+    setFormData({ ...formData, cep: masked })
+
+    const cepNumbers = masked.replace(/\D/g, '')
+    if (cepNumbers.length === 8) {
+      setIsLoadingCep(true)
+      try {
+        const cepData = await buscarCep(cepNumbers)
+        setFormData((prev) => ({
+          ...prev,
+          cep: masked,
+          logradouro: cepData.street || prev.logradouro,
+          bairro: cepData.neighborhood || prev.bairro,
+          cidade: cepData.city || prev.cidade,
+          estado: cepData.state || prev.estado,
+        }))
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : 'Erro ao buscar CEP'
+        Alert.alert('Aviso', errorMessage)
+      } finally {
+        setIsLoadingCep(false)
+      }
+    }
+  }
 
   const createMutation = useMutation({
     mutationFn: criarEndereco,
@@ -131,18 +161,23 @@ export default function StoreLocationScreen() {
 
             <View className="bg-white rounded-2xl p-6 mb-6 shadow-sm">
               <View className="mb-4">
-                <Text className="text-frg900 font-medium mb-2">CEP *</Text>
+                <View className="flex-row items-center justify-between mb-2">
+                  <Text className="text-frg900 font-medium">CEP *</Text>
+                  {isLoadingCep && (
+                    <ActivityIndicator size="small" color="#437C99" />
+                  )}
+                </View>
                 <TextInput
                   className="bg-inputbg border border-gray-200 rounded-xl px-4 py-3 text-base"
                   placeholder="00000-000"
                   value={formData.cep}
-                  onChangeText={(text) => {
-                    const masked = maskCEP(text)
-                    setFormData({ ...formData, cep: masked })
-                  }}
+                  onChangeText={handleCepChange}
                   keyboardType="numeric"
                   maxLength={8}
                 />
+                <Text className="text-gray-500 text-xs mt-1">
+                  Preenchimento automático ao digitar 8 dígitos
+                </Text>
               </View>
 
               <View className="mb-4">
@@ -246,4 +281,3 @@ export default function StoreLocationScreen() {
     </SafeAreaView>
   )
 }
-

@@ -145,3 +145,21 @@ export interface ListaPedidosRes {
   pedidos: PedidoRes[]
   total: number
 }
+
+export interface AtualizarStatusPedidoReq {
+  status: 'pendente' | 'pago' | 'processando' | 'enviado' | 'entregue' | 'cancelado'
+  codigoRastreamento?: string
+  transportadora?: string
+  previsaoEntrega?: string
+  motivoCancelamento?: string
+}
+
+export interface PedidoStatusAtualizadoRes {
+  id: string
+  status: string
+  codigo_rastreamento?: string | null
+  transportadora?: string | null
+  previsao_entrega?: string | null
+  motivo_cancelamento?: string | null
+  atualizado_em: string
+}

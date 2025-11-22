@@ -8,13 +8,14 @@ import {
   FlatList,
   Image,
   RefreshControl,
-  Alert,
+  ActivityIndicator,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { router } from 'expo-router'
 import PagerView from 'react-native-pager-view'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import Toast from 'react-native-toast-message'
 import { useAuthStore } from '@/stores/auth'
 import { useCustomerStore } from '@/stores/customer'
 import { getCustomerProfile, listarEnderecos } from '@/services/customer'
@@ -25,10 +26,75 @@ import {
   removerFavorito,
   listarFavoritos,
   obterProduto,
+  listarImagensProduto,
+  listarVariacoesProduto,
+  obterVendedorUsuario,
 } from '@/services/sales'
 import type { CategoriaRes, ProdutoRes } from '@/services/sales/interface'
 import { useBackHandler } from '@/hooks/indext'
 import { useCart } from '@/contexts/CartContext'
+
+interface ProductImageProps {
+  readonly produtoId: string
+  readonly className?: string
+  readonly resizeMode?: 'cover' | 'contain' | 'stretch' | 'center'
+  readonly alt?: string
+  readonly onError?: () => void
+}
+
+function ProductImage({
+  produtoId,
+  className = 'w-full h-32 rounded-xl',
+  resizeMode = 'cover',
+  alt = 'Produto',
+  onError,
+}: ProductImageProps) {
+  const [imageError, setImageError] = useState(false)
+
+  const { data: imagensData, isLoading } = useQuery({
+    queryKey: ['imagens-produto', produtoId],
+    queryFn: () => listarImagensProduto(produtoId),
+    enabled: !!produtoId,
+  })
+
+  const imagemPrincipal =
+    imagensData?.imagens?.find((img) => img?.tipo === 'principal')?.url ||
+    imagensData?.imagens?.[0]?.url
+
+  const handleError = () => {
+    setImageError(true)
+    onError?.()
+  }
+
+  if (isLoading) {
+    return (
+      <View className={`${className} bg-gray-100 items-center justify-center`}>
+        <ActivityIndicator size="small" color="#437C99" />
+      </View>
+    )
+  }
+
+  if (imageError || !imagemPrincipal) {
+    return (
+      <View className={`${className} bg-gray-100 items-center justify-center`}>
+        <Ionicons name="image-outline" size={32} color="#9FABB9" />
+        <Text className="text-xs text-system-text mt-1 text-center px-1">
+          Erro
+        </Text>
+      </View>
+    )
+  }
+
+  return (
+    <Image
+      source={{ uri: imagemPrincipal }}
+      className={className}
+      resizeMode={resizeMode}
+      alt={alt}
+      onError={handleError}
+    />
+  )
+}
 
 function SellerProductsDashboard() {
   const { userId } = useAuthStore()
@@ -175,26 +241,22 @@ function SellerProductsDashboard() {
           </View>
         )}
 
-        {/* Lista de Produtos */}
         <View className="flex-row items-center justify-between mb-4">
           <Text className="text-frg900 font-bold text-xl">Meus Produtos</Text>
           <TouchableOpacity
             className="bg-frgprimary rounded-full px-4 py-2"
             onPress={() => {
-              if (!hasStoreLocation) {
-                Alert.alert(
-                  'Localização da Loja Necessária',
-                  'Você precisa cadastrar a localização da sua loja antes de criar produtos.',
-                  [
-                    {
-                      text: 'Cadastrar Agora',
-                      onPress: () => router.push('/seller/store-location'),
-                    },
-                    { text: 'Cancelar', style: 'cancel' },
-                  ],
-                )
-              } else {
+              if (hasStoreLocation) {
                 router.push('/seller/products/new')
+              } else {
+                Toast.show({
+                  type: 'info',
+                  text1: 'Localização Necessária',
+                  text2: 'Cadastre a localização da sua loja primeiro',
+                })
+                setTimeout(() => {
+                  router.push('/seller/store-location')
+                }, 2000)
               }
             }}
           >
@@ -205,111 +267,106 @@ function SellerProductsDashboard() {
           </TouchableOpacity>
         </View>
 
-        {isLoading ? (
-          <View className="items-center py-8">
-            <Text className="text-system-text">Carregando produtos...</Text>
-          </View>
-        ) : produtos.length > 0 ? (
-          produtos.slice(0, 5).map((produto) => {
-            const principal =
-              produto.imagens?.find((img) => img?.tipo === 'principal')?.url ||
-              produto.imagens?.[0]?.url
-
+        {(() => {
+          if (isLoading) {
             return (
-              <TouchableOpacity
-                key={produto.id}
-                className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4"
-                onPress={() => router.push('/seller/products')}
-              >
-                <View className="flex-row">
-                  {principal ? (
-                    <Image
-                      source={{ uri: principal }}
+              <View className="items-center py-8">
+                <Text className="text-system-text">Carregando produtos...</Text>
+              </View>
+            )
+          }
+
+          if (produtos.length > 0) {
+            return produtos.slice(0, 5).map((produto) => {
+              return (
+                <TouchableOpacity
+                  key={produto.id}
+                  className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4"
+                  onPress={() => router.push('/seller/products')}
+                >
+                  <View className="flex-row">
+                    <ProductImage
+                      produtoId={produto.id}
                       className="w-20 h-20 rounded-xl mr-4"
                       resizeMode="cover"
                       alt={produto.nome}
                     />
-                  ) : (
-                    <View className="w-20 h-20 rounded-xl mr-4 bg-gray-200 items-center justify-center">
-                      <Ionicons
-                        name="image-outline"
-                        size={32}
-                        color="#9FABB9"
-                      />
-                    </View>
-                  )}
-                  <View className="flex-1">
-                    <View className="flex-row items-start justify-between mb-2">
-                      <View className="flex-1">
-                        <Text className="text-frg900 font-semibold text-base mb-1">
-                          {produto.nome}
-                        </Text>
-                        <Text className="text-frgprimary font-bold text-lg">
-                          {formatPrice(produto.preco)}
-                        </Text>
-                      </View>
-                      <View
-                        className={`px-3 py-1 rounded-full ${
-                          produto.estoque > 0 ? 'bg-green-100' : 'bg-gray-100'
-                        }`}
-                      >
-                        <Text
-                          className={`text-xs font-semibold ${
-                            produto.estoque > 0
-                              ? 'text-green-700'
-                              : 'text-gray-600'
+                    <View className="flex-1">
+                      <View className="flex-row items-start justify-between mb-2">
+                        <View className="flex-1">
+                          <Text className="text-frg900 font-semibold text-base mb-1">
+                            {produto.nome}
+                          </Text>
+                          <Text className="text-frgprimary font-bold text-lg">
+                            {formatPrice(produto.preco)}
+                          </Text>
+                        </View>
+                        <View
+                          className={`px-3 py-1 rounded-full ${
+                            produto.estoque > 0 ? 'bg-green-100' : 'bg-gray-100'
                           }`}
                         >
-                          {produto.estoque > 0 ? 'Ativo' : 'Sem estoque'}
+                          <Text
+                            className={`text-xs font-semibold ${
+                              produto.estoque > 0
+                                ? 'text-green-700'
+                                : 'text-gray-600'
+                            }`}
+                          >
+                            {produto.estoque > 0 ? 'Ativo' : 'Sem estoque'}
+                          </Text>
+                        </View>
+                      </View>
+                      <View className="flex-row items-center">
+                        <Ionicons
+                          name="cube-outline"
+                          size={14}
+                          color="#9FABB9"
+                        />
+                        <Text className="text-system-text text-sm ml-1">
+                          Estoque: {produto.estoque}
                         </Text>
                       </View>
                     </View>
-                    <View className="flex-row items-center">
-                      <Ionicons name="cube-outline" size={14} color="#9FABB9" />
-                      <Text className="text-system-text text-sm ml-1">
-                        Estoque: {produto.estoque}
-                      </Text>
-                    </View>
                   </View>
-                </View>
-              </TouchableOpacity>
-            )
-          })
-        ) : (
-          <View className="items-center py-12 bg-white rounded-2xl">
-            <Ionicons name="cube-outline" size={64} color="#9FABB9" />
-            <Text className="text-frg900 font-bold text-xl mt-4 mb-2">
-              Nenhum produto cadastrado
-            </Text>
-            <Text className="text-system-text text-center mb-6">
-              Comece cadastrando seu primeiro produto
-            </Text>
-            <TouchableOpacity
-              className="bg-frgprimary rounded-xl py-3 px-6"
-              onPress={() => {
-                if (!hasStoreLocation) {
-                  Alert.alert(
-                    'Localização da Loja Necessária',
-                    'Você precisa cadastrar a localização da sua loja antes de criar produtos.',
-                    [
-                      {
-                        text: 'Cadastrar Agora',
-                        onPress: () => router.push('/seller/store-location'),
-                      },
-                      { text: 'Cancelar', style: 'cancel' },
-                    ],
-                  )
-                } else {
-                  router.push('/seller/products/new')
-                }
-              }}
-            >
-              <Text className="text-white font-semibold">
-                Cadastrar Produto
+                </TouchableOpacity>
+              )
+            })
+          }
+
+          return (
+            <View className="items-center py-12 bg-white rounded-2xl">
+              <Ionicons name="cube-outline" size={64} color="#9FABB9" />
+              <Text className="text-frg900 font-bold text-xl mt-4 mb-2">
+                Nenhum produto cadastrado
               </Text>
-            </TouchableOpacity>
-          </View>
-        )}
+              <Text className="text-system-text text-center mb-6">
+                Comece cadastrando seu primeiro produto
+              </Text>
+              <TouchableOpacity
+                className="bg-frgprimary rounded-xl py-3 px-6"
+                onPress={() => {
+                  if (hasStoreLocation) {
+                    router.push('/seller/products/new')
+                  } else {
+                    Toast.show({
+                      type: 'info',
+                      text1: 'Localização Necessária',
+                      text2: 'Cadastre a localização da sua loja primeiro',
+                    })
+                    setTimeout(() => {
+                      router.push('/seller/store-location')
+                    }, 2000)
+                  }
+                }}
+              >
+                <Text className="text-white font-semibold">
+                  Cadastrar Produto
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )
+        })()}
 
         {produtos.length > 5 && (
           <TouchableOpacity
@@ -334,7 +391,6 @@ export default function HomeScreen() {
     null,
   )
   const [quantidade, setQuantidade] = useState(1)
-  const [imageError, setImageError] = useState(false)
   const [selectedVariacaoId, setSelectedVariacaoId] = useState<string | null>(
     null,
   )
@@ -387,6 +443,28 @@ export default function HomeScreen() {
     enabled: !!selectedProductId && !isVendedor,
   })
 
+  const { data: vendedorData } = useQuery({
+    queryKey: ['vendedor', produtoDetalhe?.vendedorId],
+    queryFn: () => obterVendedorUsuario(produtoDetalhe!.vendedorId!),
+    enabled: !!produtoDetalhe?.vendedorId && !isVendedor,
+  })
+
+  const { data: variacoesData } = useQuery({
+    queryKey: ['variacoes', selectedProductId],
+    queryFn: () => listarVariacoesProduto(selectedProductId!),
+    enabled: !!selectedProductId && !isVendedor,
+  })
+
+  const { data: imagensProdutoData } = useQuery({
+    queryKey: ['imagens-produto', selectedProductId],
+    queryFn: () => listarImagensProduto(selectedProductId!),
+    enabled: !!selectedProductId && !isVendedor,
+  })
+
+  const imagemPrincipalProduto =
+    imagensProdutoData?.imagens?.find((img) => img?.tipo === 'principal')
+      ?.url || imagensProdutoData?.imagens?.[0]?.url
+
   const favoritosIds = new Set(
     favoritosData?.favoritos.map((f) => f.produtoId) || [],
   )
@@ -413,10 +491,22 @@ export default function HomeScreen() {
 
   useEffect(() => {
     if (produtoDetalhe) {
-      setImageError(false)
       setSelectedVariacaoId(null)
+      setQuantidade(1)
     }
   }, [produtoDetalhe])
+
+  useEffect(() => {
+    if (selectedVariacaoId && variacoesData?.variacoes) {
+      const variacaoSelecionada = variacoesData.variacoes.find(
+        (v) => v.id === selectedVariacaoId,
+      )
+      if (variacaoSelecionada && quantidade > variacaoSelecionada.estoque) {
+        setQuantidade(Math.max(1, variacaoSelecionada.estoque))
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedVariacaoId, variacoesData])
 
   const getWelcomeMessage = () => {
     if (isLoadingProfile && !isVendedor) return 'Carregando...'
@@ -449,22 +539,21 @@ export default function HomeScreen() {
     qtd?: number,
     variacaoId?: string | null,
   ) => {
-    try {
-      await addToCart({
-        produtoId: produto.id,
-        quantidade: qtd || 1,
-        variacaoId: variacaoId || undefined,
-      })
-      Alert.alert('Sucesso', 'Produto adicionado ao carrinho!')
-    } catch (error) {
-      Alert.alert('Erro', 'Não foi possível adicionar ao carrinho.')
-    }
+    await addToCart({
+      produtoId: produto.id,
+      quantidade: qtd || 1,
+      variacaoId: variacaoId || undefined,
+    })
+    Toast.show({
+      type: 'success',
+      text1: 'Sucesso',
+      text2: 'Produto adicionado ao carrinho!',
+    })
   }
 
   const handleViewProduct = (produtoId: string) => {
     setSelectedProductId(produtoId)
     setQuantidade(1)
-    setImageError(false)
     setSelectedVariacaoId(null)
     if (pagerRef.current) {
       pagerRef.current.setPage(1)
@@ -473,7 +562,6 @@ export default function HomeScreen() {
 
   const handleBackToList = () => {
     setSelectedProductId(null)
-    setImageError(false)
     setSelectedVariacaoId(null)
     if (pagerRef.current) {
       pagerRef.current.setPage(0)
@@ -506,21 +594,14 @@ export default function HomeScreen() {
       promo < preco
     const precoFinal = temDesconto ? promo : preco
 
-    const principal =
-      item.imagens?.find((img) => img?.tipo === 'principal')?.url ||
-      item.imagens?.[0]?.url
-    const imageUrl = principal || ''
-
     return (
       <TouchableOpacity
         className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mr-4 w-48"
         onPress={() => handleViewProduct(item.id)}
       >
         <View className="relative">
-          <Image
-            source={{
-              uri: imageUrl,
-            }}
+          <ProductImage
+            produtoId={item.id}
             className="w-full h-32 rounded-xl mb-3"
             resizeMode="cover"
             alt={item.nome}
@@ -566,12 +647,6 @@ export default function HomeScreen() {
               </Text>
             )}
           </View>
-          <TouchableOpacity
-            className="bg-frgprimary rounded-lg p-2"
-            onPress={() => handleAddToCart(item)}
-          >
-            <Ionicons name="add" size={16} color="white" />
-          </TouchableOpacity>
         </View>
       </TouchableOpacity>
     )
@@ -626,12 +701,6 @@ export default function HomeScreen() {
             ) : (
               <>
                 <TouchableOpacity
-                  className="bg-gray-100 rounded-full p-2"
-                  onPress={() => router.push('/mannequin')}
-                >
-                  <Ionicons name="shirt-outline" size={20} color="#9FABB9" />
-                </TouchableOpacity>
-                <TouchableOpacity
                   className="bg-gray-100 rounded-full p-2 relative"
                   onPress={() => router.push('/cart')}
                 >
@@ -666,15 +735,25 @@ export default function HomeScreen() {
         </View>
 
         {!isVendedor && !selectedProductId && (
-          <View className="flex-row items-center bg-gray-100 rounded-xl px-4 py-3">
-            <Ionicons name="search-outline" size={20} color="#9FABB9" />
+          <View className="flex-row items-center bg-white rounded-2xl px-4 py-2 shadow-sm border border-gray-200">
+            <View className="bg-frgprimary/10 rounded-full p-1.5 mr-2">
+              <Ionicons name="search-outline" size={18} color="#437C99" />
+            </View>
             <TextInput
-              className="flex-1 ml-3 text-base"
+              className="flex-1 text-sm text-frg900 py-1"
               placeholder="Buscar produtos..."
               placeholderTextColor="#9FABB9"
               value={searchText}
               onChangeText={setSearchText}
             />
+            {searchText.length > 0 && (
+              <TouchableOpacity
+                onPress={() => setSearchText('')}
+                className="ml-2"
+              >
+                <Ionicons name="close-circle" size={18} color="#9FABB9" />
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </View>
@@ -800,52 +879,12 @@ export default function HomeScreen() {
                   showsVerticalScrollIndicator={false}
                 >
                   <View className="bg-white mb-4">
-                    {(() => {
-                      const imagemPrincipal =
-                        produtoDetalhe.imagens?.find(
-                          (img) => img?.tipo === 'principal',
-                        )?.url || produtoDetalhe.imagens?.[0]?.url
-                      const imageUri =
-                        imagemPrincipal && imagemPrincipal.trim() !== ''
-                          ? imagemPrincipal
-                          : null
-
-                      if (!imageUri || imageError) {
-                        return (
-                          <View className="w-full h-80 bg-gray-200 items-center justify-center">
-                            <Ionicons
-                              name="image-outline"
-                              size={64}
-                              color="#9FABB9"
-                            />
-                            <Text className="text-system-text mt-2">
-                              Sem imagem
-                            </Text>
-                          </View>
-                        )
-                      }
-
-                      return (
-                        <Image
-                          key={`${produtoDetalhe.id}-${imageUri}`}
-                          source={{ uri: imageUri }}
-                          className="w-full h-80"
-                          resizeMode="cover"
-                          alt={produtoDetalhe.nome}
-                          onError={() => {
-                            console.log('Erro ao carregar imagem:', imageUri)
-                            setImageError(true)
-                          }}
-                          onLoad={() => {
-                            console.log(
-                              'Imagem carregada com sucesso:',
-                              imageUri,
-                            )
-                            setImageError(false)
-                          }}
-                        />
-                      )
-                    })()}
+                    <ProductImage
+                      produtoId={produtoDetalhe.id}
+                      className="w-full h-80"
+                      resizeMode="cover"
+                      alt={produtoDetalhe.nome}
+                    />
                   </View>
 
                   <View className="px-6 mb-6">
@@ -871,7 +910,7 @@ export default function HomeScreen() {
                       </TouchableOpacity>
                     </View>
 
-                    {produtoDetalhe.descricaoCurta && (
+                    {!!produtoDetalhe?.descricaoCurta && (
                       <Text className="text-system-text text-base mb-4">
                         {produtoDetalhe.descricaoCurta}
                       </Text>
@@ -915,6 +954,80 @@ export default function HomeScreen() {
                       </View>
                     </View>
 
+                    <View className="bg-gray-50 rounded-xl p-4 mb-4">
+                      <View className="flex-row items-center mb-2">
+                        <View className="flex-row items-center mr-3">
+                          <Ionicons name="star" size={20} color="#FFD700" />
+                          <Text className="text-frg900 font-bold text-lg ml-1">
+                            {Number(produtoDetalhe.avaliacaoMedia || 0).toFixed(
+                              1,
+                            )}
+                          </Text>
+                        </View>
+                        <Text className="text-system-text text-sm">
+                          ({produtoDetalhe.totalAvaliacoes || 0} avaliações)
+                        </Text>
+                      </View>
+                      <View className="flex-row">
+                        {[1, 2, 3, 4, 5].map((star) => {
+                          const rating = Number(
+                            produtoDetalhe.avaliacaoMedia || 0,
+                          )
+                          return (
+                            <Ionicons
+                              key={star}
+                              name={star <= rating ? 'star' : 'star-outline'}
+                              size={16}
+                              color={star <= rating ? '#FFD700' : '#D1D5DB'}
+                            />
+                          )
+                        })}
+                      </View>
+                    </View>
+
+                    {vendedorData && (
+                      <View className="bg-white rounded-xl p-4 mb-4 border border-gray-200">
+                        <View className="flex-row items-center mb-3">
+                          <View className="bg-frgprimary/10 rounded-full p-2 mr-3">
+                            <Ionicons
+                              name="storefront-outline"
+                              size={20}
+                              color="#437C99"
+                            />
+                          </View>
+                          <View className="flex-1">
+                            <Text className="text-frg900 font-bold text-base">
+                              {vendedorData.nomeFantasia}
+                            </Text>
+                            <Text className="text-system-text text-sm">
+                              {vendedorData.razaoSocial}
+                            </Text>
+                          </View>
+                          {vendedorData.status === 'aprovado' ? (
+                            <View className="bg-green-100 px-3 py-1 rounded-full">
+                              <Text className="text-green-700 text-xs font-semibold">
+                                Verificado
+                              </Text>
+                            </View>
+                          ) : (
+                            <View className="bg-yellow-100 px-3 py-1 rounded-full">
+                              <Text className="text-yellow-700 text-xs font-semibold">
+                                Não Verificado
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                        {vendedorData.criadoEm && (
+                          <Text className="text-system-text text-xs">
+                            Vendedor desde{' '}
+                            {new Date(vendedorData.criadoEm).toLocaleDateString(
+                              'pt-BR',
+                            )}
+                          </Text>
+                        )}
+                      </View>
+                    )}
+
                     <View className="bg-gray-100 rounded-xl p-4 mb-4">
                       <View className="flex-row items-center justify-between mb-2">
                         <Text className="text-frg900 font-semibold">
@@ -936,7 +1049,7 @@ export default function HomeScreen() {
                             className="bg-frgprimary rounded-full w-8 h-8 items-center justify-center"
                             onPress={() => {
                               const estoqueDisponivel = selectedVariacaoId
-                                ? produtoDetalhe.variacoes?.find(
+                                ? variacoesData?.variacoes?.find(
                                     (v) => v.id === selectedVariacaoId,
                                   )?.estoque || 0
                                 : produtoDetalhe.estoque || 0
@@ -947,7 +1060,7 @@ export default function HomeScreen() {
                             disabled={
                               quantidade >=
                               (selectedVariacaoId
-                                ? produtoDetalhe.variacoes?.find(
+                                ? variacoesData?.variacoes?.find(
                                     (v) => v.id === selectedVariacaoId,
                                   )?.estoque || 0
                                 : produtoDetalhe.estoque || 0)
@@ -959,7 +1072,7 @@ export default function HomeScreen() {
                               color={
                                 quantidade >=
                                 (selectedVariacaoId
-                                  ? produtoDetalhe.variacoes?.find(
+                                  ? variacoesData?.variacoes?.find(
                                       (v) => v.id === selectedVariacaoId,
                                     )?.estoque || 0
                                   : produtoDetalhe.estoque || 0)
@@ -975,13 +1088,13 @@ export default function HomeScreen() {
                       </Text>
                     </View>
 
-                    {produtoDetalhe.variacoes &&
-                      produtoDetalhe.variacoes.length > 0 && (
+                    {variacoesData?.variacoes &&
+                      variacoesData.variacoes.length > 0 && (
                         <View className="mb-4">
                           <Text className="text-frg900 font-semibold mb-2">
                             Variações
                           </Text>
-                          {produtoDetalhe.variacoes.map((variacao) => {
+                          {variacoesData.variacoes.map((variacao) => {
                             const isSelected =
                               selectedVariacaoId === variacao.id
                             const precoAdicional = Number(
@@ -996,17 +1109,42 @@ export default function HomeScreen() {
                                   isSelected
                                     ? 'bg-frgprimary/10 border-frgprimary'
                                     : 'bg-white border-gray-200'
-                                } ${!temEstoque ? 'opacity-50' : ''}`}
+                                } ${temEstoque ? '' : 'opacity-50'}`}
                                 onPress={() => {
                                   if (temEstoque) {
-                                    setSelectedVariacaoId(
-                                      isSelected ? null : variacao.id,
-                                    )
+                                    const novaVariacaoId = isSelected
+                                      ? null
+                                      : variacao.id
+                                    setSelectedVariacaoId(novaVariacaoId)
+                                    if (
+                                      novaVariacaoId &&
+                                      quantidade > variacao.estoque
+                                    ) {
+                                      setQuantidade(
+                                        Math.max(1, variacao.estoque),
+                                      )
+                                    }
                                   }
                                 }}
                                 disabled={!temEstoque}
                               >
-                                <View className="flex-row items-center justify-between">
+                                <View className="flex-row items-center gap-3">
+                                  {imagemPrincipalProduto ? (
+                                    <Image
+                                      source={{ uri: imagemPrincipalProduto }}
+                                      className="w-16 h-16 rounded-lg"
+                                      resizeMode="cover"
+                                      alt={`${variacao.tipo} ${variacao.valor}`}
+                                    />
+                                  ) : (
+                                    <View className="w-16 h-16 rounded-lg bg-gray-100 items-center justify-center">
+                                      <Ionicons
+                                        name="image-outline"
+                                        size={24}
+                                        color="#9FABB9"
+                                      />
+                                    </View>
+                                  )}
                                   <View className="flex-1">
                                     <View className="flex-row items-center gap-2">
                                       <Text className="text-frg900 font-medium">
@@ -1054,8 +1192,8 @@ export default function HomeScreen() {
                       }
                       disabled={
                         produtoDetalhe.estoque === 0 ||
-                        (produtoDetalhe.variacoes &&
-                          produtoDetalhe.variacoes.length > 0 &&
+                        (variacoesData?.variacoes &&
+                          variacoesData.variacoes.length > 0 &&
                           !selectedVariacaoId)
                       }
                     >
@@ -1063,8 +1201,8 @@ export default function HomeScreen() {
                         {(() => {
                           if (produtoDetalhe.estoque === 0) return 'Sem estoque'
                           if (
-                            produtoDetalhe.variacoes &&
-                            produtoDetalhe.variacoes.length > 0 &&
+                            variacoesData?.variacoes &&
+                            variacoesData.variacoes.length > 0 &&
                             !selectedVariacaoId
                           )
                             return 'Selecione uma variação'
@@ -1073,6 +1211,64 @@ export default function HomeScreen() {
                       </Text>
                     </TouchableOpacity>
                   </View>
+
+                  {produtosData && produtosData.produtos.length > 0 && (
+                    <View className="px-6 mb-6">
+                      <Text className="text-frg900 font-bold text-xl mb-4">
+                        Outros Produtos
+                      </Text>
+                      <FlatList
+                        data={produtosData.produtos
+                          .filter((p) => p.id !== produtoDetalhe.id)
+                          .slice(0, 10)}
+                        renderItem={({ item }) => (
+                          <TouchableOpacity
+                            className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mr-4 w-48"
+                            onPress={() => handleViewProduct(item.id)}
+                          >
+                            <View className="relative">
+                              <ProductImage
+                                produtoId={item.id}
+                                className="w-full h-32 rounded-xl mb-3"
+                                resizeMode="cover"
+                                alt={item.nome}
+                              />
+                              <Text
+                                className="text-frg900 font-semibold text-sm mb-1"
+                                numberOfLines={2}
+                              >
+                                {item.nome}
+                              </Text>
+                              <View className="flex-row items-center justify-between">
+                                <Text className="text-frgprimary font-bold text-base">
+                                  {formatPrice(
+                                    (() => {
+                                      const preco = Number(item.preco)
+                                      const promo = Number(
+                                        item.precoPromocional,
+                                      )
+                                      if (
+                                        Number.isFinite(preco) &&
+                                        Number.isFinite(promo) &&
+                                        promo > 0 &&
+                                        promo < preco
+                                      ) {
+                                        return promo
+                                      }
+                                      return preco
+                                    })(),
+                                  )}
+                                </Text>
+                              </View>
+                            </View>
+                          </TouchableOpacity>
+                        )}
+                        keyExtractor={(item) => item.id}
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                      />
+                    </View>
+                  )}
 
                   <View className="h-20" />
                 </ScrollView>

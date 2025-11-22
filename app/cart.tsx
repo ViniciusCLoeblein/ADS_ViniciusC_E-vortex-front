@@ -12,41 +12,145 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { router } from 'expo-router'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  atualizarItemCarrinho,
   removerItemCarrinho,
   limparCarrinho,
+  listarImagensProduto,
 } from '@/services/sales'
 import { useCart } from '@/contexts/CartContext'
+import type { ItemCarrinhoRes } from '@/services/sales/interface'
+
+interface CartItemProps {
+  readonly item: ItemCarrinhoRes
+  readonly imageErrors: Record<string, boolean>
+  readonly onImageError: (itemId: string) => void
+  readonly onRemove: (itemId: string) => Promise<void>
+  readonly onViewProduct: (produtoId: string) => void
+  readonly removeItemMutation: {
+    readonly isPending: boolean
+  }
+  readonly formatPrice: (price: number) => string
+}
+
+function CartItem({
+  item,
+  imageErrors,
+  onImageError,
+  onRemove,
+  onViewProduct,
+  removeItemMutation,
+  formatPrice,
+}: CartItemProps) {
+  const { data: imagensData, isLoading: isLoadingImage } = useQuery({
+    queryKey: ['imagens-produto', item.produtoId],
+    queryFn: () => listarImagensProduto(item.produtoId),
+    enabled: !!item.produtoId,
+  })
+
+  const imagemPrincipal =
+    imagensData?.imagens?.find((img) => img?.tipo === 'principal')?.url ||
+    imagensData?.imagens?.[0]?.url
+
+  const hasImageError =
+    imageErrors[item.id] || (!isLoadingImage && !imagemPrincipal)
+
+  const renderImageContent = () => {
+    if (isLoadingImage) {
+      return <ActivityIndicator size="small" color="#437C99" />
+    }
+
+    if (hasImageError) {
+      return (
+        <View className="w-full h-full items-center justify-center">
+          <Ionicons name="image-outline" size={24} color="#9FABB9" />
+          <Text className="text-xs text-system-text mt-1 text-center px-1">
+            Erro
+          </Text>
+        </View>
+      )
+    }
+
+    return (
+      <Image
+        source={{ uri: imagemPrincipal }}
+        className="w-full h-full"
+        resizeMode="cover"
+        onError={() => onImageError(item.id)}
+        alt={item.produto?.nome || 'Produto'}
+      />
+    )
+  }
+
+  return (
+    <TouchableOpacity
+      className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4"
+      onPress={() => onViewProduct(item.produtoId)}
+      activeOpacity={0.7}
+    >
+      <View className="flex-row">
+        <View className="w-20 h-20 rounded-xl mr-4 overflow-hidden bg-gray-100 items-center justify-center">
+          {renderImageContent()}
+        </View>
+
+        <View className="flex-1">
+          <Text
+            className="text-frg900 font-semibold text-base mb-1"
+            numberOfLines={2}
+          >
+            {item.produto?.nome || 'Produto'}
+          </Text>
+
+          {item.variacao && (
+            <Text className="text-system-text text-sm mb-1">
+              {item.variacao.tipo}: {item.variacao.valor}
+            </Text>
+          )}
+
+          <View className="flex-row items-center justify-between">
+            <View className="flex-1">
+              <Text className="text-frgprimary font-bold text-lg">
+                {formatPrice(item.precoUnitario * item.quantidade)}
+              </Text>
+              <Text className="text-system-text text-sm">
+                {formatPrice(item.precoUnitario)} cada • Qtd: {item.quantidade}
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              className="bg-red-50 rounded-full w-10 h-10 items-center justify-center ml-2"
+              onPress={(e) => {
+                e.stopPropagation()
+                Alert.alert(
+                  'Remover item',
+                  'Deseja remover este item do carrinho?',
+                  [
+                    { text: 'Cancelar', style: 'cancel' },
+                    {
+                      text: 'Remover',
+                      style: 'destructive',
+                      onPress: () => {
+                        onRemove(item.id).catch(() => {})
+                      },
+                    },
+                  ],
+                )
+              }}
+              disabled={removeItemMutation.isPending}
+            >
+              <Ionicons name="trash-outline" size={20} color="#EF4058" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </TouchableOpacity>
+  )
+}
 
 export default function CartScreen() {
   const queryClient = useQueryClient()
-  const {
-    items,
-    isLoading,
-    updateQuantity,
-    removeFromCart,
-    clearCart,
-    syncCart,
-  } = useCart()
+  const { items, isLoading, removeFromCart, clearCart, syncCart } = useCart()
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({})
-
-  console.log('items', items)
-
-  const updateItemMutation = useMutation({
-    mutationFn: ({
-      itemId,
-      quantidade,
-    }: {
-      itemId: string
-      quantidade: number
-    }) => atualizarItemCarrinho(itemId, { quantidade }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['carrinho'] })
-      syncCart()
-    },
-  })
 
   const removeItemMutation = useMutation({
     mutationFn: removerItemCarrinho,
@@ -69,18 +173,18 @@ export default function CartScreen() {
     },
   })
 
-  const handleQuantityChange = async (itemId: string, newQuantity: number) => {
-    if (newQuantity <= 0) {
-      await removeFromCart(itemId)
-      if (!itemId.startsWith('local-')) {
-        removeItemMutation.mutate(itemId)
-      }
-    } else {
-      await updateQuantity(itemId, newQuantity)
-      if (!itemId.startsWith('local-')) {
-        updateItemMutation.mutate({ itemId, quantidade: newQuantity })
-      }
+  const handleRemoveItem = async (itemId: string) => {
+    await removeFromCart(itemId)
+    if (!itemId.startsWith('local-')) {
+      removeItemMutation.mutate(itemId)
     }
+  }
+
+  const handleViewProduct = (produtoId: string) => {
+    router.push({
+      pathname: '/home',
+      params: { produtoId },
+    })
   }
 
   const handleCheckout = () => {
@@ -207,100 +311,18 @@ export default function CartScreen() {
         }
       >
         <View className="px-6 py-4">
-          {items.map((item) => {
-            const imagemPrincipal =
-              item.produto?.imagens?.find((img) => img?.tipo === 'principal')
-                ?.url || item.produto?.imagens?.[0]?.url
-
-            const hasImageError = imageErrors[item.id] || !imagemPrincipal
-
-            return (
-              <View
-                key={item.id}
-                className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4"
-              >
-                <View className="flex-row">
-                  <View className="w-20 h-20 rounded-xl mr-4 overflow-hidden bg-gray-100 items-center justify-center">
-                    {hasImageError ? (
-                      <View className="w-full h-full items-center justify-center">
-                        <Ionicons
-                          name="image-outline"
-                          size={24}
-                          color="#9FABB9"
-                        />
-                        <Text className="text-xs text-system-text mt-1 text-center px-1">
-                          Erro
-                        </Text>
-                      </View>
-                    ) : (
-                      <Image
-                        source={{ uri: imagemPrincipal }}
-                        className="w-full h-full"
-                        resizeMode="cover"
-                        onError={() => handleImageError(item.id)}
-                        alt={item.produto?.nome || 'Produto'}
-                      />
-                    )}
-                  </View>
-
-                  <View className="flex-1">
-                    <Text
-                      className="text-frg900 font-semibold text-base mb-1"
-                      numberOfLines={2}
-                    >
-                      {item.produto?.nome || 'Produto'}
-                    </Text>
-
-                    {item.variacao && (
-                      <Text className="text-system-text text-sm mb-1">
-                        {item.variacao.tipo}: {item.variacao.valor}
-                      </Text>
-                    )}
-
-                    <View className="flex-row items-center justify-between">
-                      <View>
-                        <Text className="text-frgprimary font-bold text-lg">
-                          {formatPrice(item.precoUnitario * item.quantidade)}
-                        </Text>
-                        <Text className="text-system-text text-sm">
-                          {formatPrice(item.precoUnitario)} cada
-                        </Text>
-                      </View>
-
-                      <View className="flex-row items-center">
-                        <TouchableOpacity
-                          className="bg-gray-100 rounded-full w-8 h-8 items-center justify-center"
-                          onPress={() =>
-                            handleQuantityChange(item.id, item.quantidade - 1)
-                          }
-                          disabled={
-                            updateItemMutation.isPending ||
-                            removeItemMutation.isPending
-                          }
-                        >
-                          <Ionicons name="remove" size={16} color="#9FABB9" />
-                        </TouchableOpacity>
-
-                        <Text className="mx-4 text-frg900 font-semibold text-base">
-                          {item.quantidade}
-                        </Text>
-
-                        <TouchableOpacity
-                          className="bg-frgprimary rounded-full w-8 h-8 items-center justify-center"
-                          onPress={() =>
-                            handleQuantityChange(item.id, item.quantidade + 1)
-                          }
-                          disabled={updateItemMutation.isPending}
-                        >
-                          <Ionicons name="add" size={16} color="white" />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  </View>
-                </View>
-              </View>
-            )
-          })}
+          {items.map((item) => (
+            <CartItem
+              key={item.id}
+              item={item}
+              imageErrors={imageErrors}
+              onImageError={handleImageError}
+              onRemove={handleRemoveItem}
+              onViewProduct={handleViewProduct}
+              removeItemMutation={removeItemMutation}
+              formatPrice={formatPrice}
+            />
+          ))}
         </View>
 
         <View className="h-32" />

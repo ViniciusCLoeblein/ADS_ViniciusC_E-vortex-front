@@ -39,8 +39,6 @@ export default function CardsScreen() {
     )
   }
 
-  console.log('data', data)
-
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       <View className="bg-white px-6 py-4 shadow-sm">

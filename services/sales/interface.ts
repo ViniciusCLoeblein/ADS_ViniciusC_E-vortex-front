@@ -25,15 +25,29 @@ export interface ImagemRes {
 export interface ProdutoRes {
   id: string
   uuid: string
+  vendedorId: string
+  categoriaId: string
+  sku: string
   nome: string
+  descricao: string
   descricaoCurta: string
   preco: string
   precoPromocional: string
+  pesoKg: string
+  alturaCm: string
+  larguraCm: string
+  profundidadeCm: string
+  estoque: number
+  estoqueMinimo: number
+  vendidos: number
+  visualizacoes: number
   avaliacaoMedia: string
   totalAvaliacoes: number
-  estoque: number
-  variacoes: VariacaoRes[]
-  imagens: ImagemRes[]
+  tags: string
+  ativo: boolean
+  destaque: boolean
+  criadoEm: string
+  atualizadoEm: string
 }
 
 export interface ItemCarrinhoRes {
@@ -72,21 +86,7 @@ export interface ProdutoListagemRes {
   totalPaginas: number
 }
 
-export interface ProdutoDetalheRes {
-  avaliacaoMedia: string
-  descricao: string
-  descricaoCurta: string
-  estoque: number
-  id: string
-  imagens: ImagemRes[]
-  nome: string
-  preco: string
-  precoPromocional: string
-  sku: string
-  totalAvaliacoes: number
-  uuid: string
-  variacoes: VariacaoRes[]
-}
+export interface ProdutoDetalheRes extends ProdutoRes {}
 
 export interface CriarProdutoReq {
   categoriaId: string
@@ -237,4 +237,22 @@ export interface ImagemUploadRes {
   legenda?: string
   ordem: number
   createdAt: string
+}
+
+export interface VendedorPublicoRes {
+  id: string
+  uuid: string
+  nomeFantasia: string
+  razaoSocial: string
+  status: string
+  dataAprovacao: Date | null
+  criadoEm: Date
+}
+
+export interface ListaVendedoresRes {
+  vendedores: VendedorPublicoRes[]
+  total: number
+  pagina: number
+  limite: number
+  totalPaginas: number
 }

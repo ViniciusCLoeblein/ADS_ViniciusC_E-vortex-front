@@ -7,18 +7,79 @@ import {
   Image,
   Alert,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { router } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { obterCarrinho, limparCarrinho } from '@/services/sales'
+import {
+  obterCarrinho,
+  limparCarrinho,
+  listarImagensProduto,
+} from '@/services/sales'
 import {
   listarEnderecos,
   listarCartoes,
   criarPedido,
 } from '@/services/customer'
 import { EnderecoRes } from '@/services/customer/interface'
+
+interface ProductImageProps {
+  readonly produtoId: string
+  readonly className?: string
+  readonly resizeMode?: 'cover' | 'contain' | 'stretch' | 'center'
+  readonly alt?: string
+}
+
+function ProductImage({
+  produtoId,
+  className = 'w-20 h-20 rounded-xl',
+  resizeMode = 'cover',
+  alt = 'Produto',
+}: ProductImageProps) {
+  const [imageError, setImageError] = useState(false)
+
+  const { data: imagensData, isLoading } = useQuery({
+    queryKey: ['imagens-produto', produtoId],
+    queryFn: () => listarImagensProduto(produtoId),
+    enabled: !!produtoId,
+  })
+
+  const imagemPrincipal =
+    imagensData?.imagens?.find((img) => img?.tipo === 'principal')?.url ||
+    imagensData?.imagens?.[0]?.url
+
+  const handleError = () => {
+    setImageError(true)
+  }
+
+  if (isLoading) {
+    return (
+      <View className={`${className} bg-gray-100 items-center justify-center`}>
+        <ActivityIndicator size="small" color="#437C99" />
+      </View>
+    )
+  }
+
+  if (imageError || !imagemPrincipal) {
+    return (
+      <View className={`${className} bg-gray-100 items-center justify-center`}>
+        <Ionicons name="image-outline" size={24} color="#9FABB9" />
+      </View>
+    )
+  }
+
+  return (
+    <Image
+      source={{ uri: imagemPrincipal }}
+      className={className}
+      resizeMode={resizeMode}
+      alt={alt}
+      onError={handleError}
+    />
+  )
+}
 
 export default function CheckoutScreen() {
   const queryClient = useQueryClient()
@@ -301,9 +362,14 @@ export default function CheckoutScreen() {
         quantidade: item.quantidade,
       }))
 
+      if (!selectedEndereco || !selectedCartao) {
+        setIsProcessing(false)
+        return
+      }
+
       await criarPedidoMutation.mutateAsync({
-        enderecoEntregaId: selectedEndereco!,
-        cartaoCreditoId: selectedCartao || undefined,
+        enderecoEntregaId: selectedEndereco,
+        cartaoCreditoId: selectedCartao,
         metodoPagamento: 'cartao',
         frete: 0,
         desconto: 0,
@@ -382,13 +448,11 @@ export default function CheckoutScreen() {
                 className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4"
               >
                 <View className="flex-row">
-                  <Image
-                    source={{ uri: item.produto?.imagens?.[0]?.url || '' }}
+                  <ProductImage
+                    produtoId={item.produtoId}
                     className="w-20 h-20 rounded-xl mr-4"
                     resizeMode="cover"
-                    alt={
-                      item.produto?.nome ? `Imagem de ${item.produto.nome}` : ''
-                    }
+                    alt={item.produto?.nome || 'Produto'}
                   />
 
                   <View className="flex-1">

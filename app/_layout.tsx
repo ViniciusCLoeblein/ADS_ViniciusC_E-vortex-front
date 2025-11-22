@@ -99,6 +99,8 @@ export default function RootLayout() {
     'seller/products',
     'seller/products/new',
     'seller/categories',
+    'seller/store-location',
+    'seller/my-company',
     'checkout',
     'order-success',
   ]

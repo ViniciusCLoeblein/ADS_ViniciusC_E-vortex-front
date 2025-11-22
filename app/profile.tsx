@@ -93,25 +93,53 @@ export default function ProfileScreen() {
                 <Ionicons name="chevron-forward" size={20} color="#9FABB9" />
               </TouchableOpacity>
 
-              <TouchableOpacity
-                className="bg-white rounded-2xl p-4 mb-4 shadow-sm flex-row items-center justify-between"
-                onPress={() => router.push('/profile/cards')}
-              >
-                <View className="flex-row items-center">
-                  <View className="bg-frgprimary/10 rounded-full p-3 mr-4">
-                    <Ionicons name="card-outline" size={24} color="#437C99" />
+              {profile.tipo === 'vendedor' && (
+                <TouchableOpacity
+                  className="bg-white rounded-2xl p-4 mb-4 shadow-sm flex-row items-center justify-between"
+                  onPress={() => router.push('/seller/my-company')}
+                >
+                  <View className="flex-row items-center">
+                    <View className="bg-frgprimary/10 rounded-full p-3 mr-4">
+                      <Ionicons
+                        name="business-outline"
+                        size={24}
+                        color="#437C99"
+                      />
+                    </View>
+                    <View>
+                      <Text className="text-frg900 font-semibold text-base">
+                        Minha Empresa
+                      </Text>
+                      <Text className="text-system-text text-sm">
+                        CNPJ, dados da empresa e conta bancária
+                      </Text>
+                    </View>
                   </View>
-                  <View>
-                    <Text className="text-frg900 font-semibold text-base">
-                      Gerenciar Cartões
-                    </Text>
-                    <Text className="text-system-text text-sm">
-                      Adicionar ou remover cartões de crédito
-                    </Text>
+                  <Ionicons name="chevron-forward" size={20} color="#9FABB9" />
+                </TouchableOpacity>
+              )}
+
+              {profile.tipo !== 'vendedor' && (
+                <TouchableOpacity
+                  className="bg-white rounded-2xl p-4 mb-4 shadow-sm flex-row items-center justify-between"
+                  onPress={() => router.push('/profile/cards')}
+                >
+                  <View className="flex-row items-center">
+                    <View className="bg-frgprimary/10 rounded-full p-3 mr-4">
+                      <Ionicons name="card-outline" size={24} color="#437C99" />
+                    </View>
+                    <View>
+                      <Text className="text-frg900 font-semibold text-base">
+                        Gerenciar Cartões
+                      </Text>
+                      <Text className="text-system-text text-sm">
+                        Adicionar ou remover cartões de crédito
+                      </Text>
+                    </View>
                   </View>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color="#9FABB9" />
-              </TouchableOpacity>
+                  <Ionicons name="chevron-forward" size={20} color="#9FABB9" />
+                </TouchableOpacity>
+              )}
 
               <TouchableOpacity
                 className="bg-white rounded-2xl p-4 mb-6 shadow-sm flex-row items-center justify-between"
@@ -119,7 +147,11 @@ export default function ProfileScreen() {
               >
                 <View className="flex-row items-center">
                   <View className="bg-frgprimary/10 rounded-full p-3 mr-4">
-                    <Ionicons name="receipt-outline" size={24} color="#437C99" />
+                    <Ionicons
+                      name="receipt-outline"
+                      size={24}
+                      color="#437C99"
+                    />
                   </View>
                   <View>
                     <Text className="text-frg900 font-semibold text-base">

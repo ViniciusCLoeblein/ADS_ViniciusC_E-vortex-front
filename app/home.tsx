@@ -17,7 +17,7 @@ import PagerView from 'react-native-pager-view'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '@/stores/auth'
 import { useCustomerStore } from '@/stores/customer'
-import { getCustomerProfile } from '@/services/customer'
+import { getCustomerProfile, listarEnderecos } from '@/services/customer'
 import {
   obterCarrinho,
   listarProdutos,
@@ -30,6 +30,302 @@ import {
 } from '@/services/sales'
 import type { ProdutoRes } from '@/services/sales/interface'
 import { useBackHandler } from '@/hooks/indext'
+
+function SellerProductsDashboard() {
+  const { userId } = useAuthStore()
+
+  const {
+    data: produtosData,
+    isLoading,
+    refetch,
+  } = useQuery({
+    queryKey: ['produtos', 'vendedor', userId],
+    queryFn: () =>
+      listarProdutos({
+        vendedorId: userId || undefined,
+        pagina: 1,
+        limite: 100,
+      }),
+  })
+
+  const { data: enderecosData } = useQuery({
+    queryKey: ['enderecos'],
+    queryFn: listarEnderecos,
+  })
+
+  const hasStoreLocation = enderecosData?.enderecos && enderecosData.enderecos.length > 0
+
+  const formatPrice = (price: number | string) => {
+    const value =
+      typeof price === 'string' ? Number(price.replace(',', '.')) : price
+    const safe = Number.isFinite(value) ? value : 0
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(safe)
+  }
+
+  const produtos = produtosData?.produtos || []
+  const totalProdutos = produtos.length
+  const produtosAtivos = produtos.filter((p) => p.estoque > 0).length
+  const produtosInativos = produtos.filter((p) => p.estoque === 0).length
+  const valorTotalEstoque = produtos.reduce((acc, p) => {
+    const preco = Number(p.preco) || 0
+    const estoque = p.estoque || 0
+    return acc + preco * estoque
+  }, 0)
+
+  return (
+    <ScrollView
+      className="flex-1"
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={isLoading} onRefresh={refetch} />
+      }
+    >
+      <View className="px-6 pt-6">
+        {/* Cards de Insights */}
+        <View className="flex-row flex-wrap -mx-2 mb-6">
+          <View className="w-1/2 px-2 mb-4">
+            <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+              <View className="flex-row items-center mb-2">
+                <View className="bg-blue-100 rounded-full p-2 mr-2">
+                  <Ionicons name="cube-outline" size={20} color="#437C99" />
+                </View>
+                <Text className="text-frg900 font-bold text-2xl">
+                  {totalProdutos}
+                </Text>
+              </View>
+              <Text className="text-system-text text-sm">
+                Total de Produtos
+              </Text>
+            </View>
+          </View>
+
+          <View className="w-1/2 px-2 mb-4">
+            <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+              <View className="flex-row items-center mb-2">
+                <View className="bg-green-100 rounded-full p-2 mr-2">
+                  <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+                </View>
+                <Text className="text-frg900 font-bold text-2xl">
+                  {produtosAtivos}
+                </Text>
+              </View>
+              <Text className="text-system-text text-sm">Produtos Ativos</Text>
+            </View>
+          </View>
+
+          <View className="w-1/2 px-2 mb-4">
+            <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+              <View className="flex-row items-center mb-2">
+                <View className="bg-yellow-100 rounded-full p-2 mr-2">
+                  <Ionicons name="warning-outline" size={20} color="#F59E0B" />
+                </View>
+                <Text className="text-frg900 font-bold text-2xl">
+                  {produtosInativos}
+                </Text>
+              </View>
+              <Text className="text-system-text text-sm">Sem Estoque</Text>
+            </View>
+          </View>
+
+          <View className="w-1/2 px-2 mb-4">
+            <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+              <View className="flex-row items-center mb-2">
+                <View className="bg-purple-100 rounded-full p-2 mr-2">
+                  <Ionicons name="cash-outline" size={20} color="#8B5CF6" />
+                </View>
+                <Text className="text-frg900 font-bold text-lg">
+                  {formatPrice(valorTotalEstoque)}
+                </Text>
+              </View>
+              <Text className="text-system-text text-sm">Valor em Estoque</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Aviso se não tiver localização */}
+        {!hasStoreLocation && (
+          <View className="bg-yellow-50 rounded-xl p-4 mb-4 border border-yellow-200">
+            <View className="flex-row items-start">
+              <Ionicons
+                name="warning"
+                size={24}
+                color="#F59E0B"
+                style={{ marginRight: 12, marginTop: 2 }}
+              />
+              <View className="flex-1">
+                <Text className="text-frg900 font-semibold mb-1">
+                  Localização da Loja Necessária
+                </Text>
+                <Text className="text-system-text text-sm mb-3">
+                  Cadastre a localização da sua loja para poder criar produtos.
+                </Text>
+                <TouchableOpacity
+                  className="bg-frgprimary rounded-xl py-2 px-4 self-start"
+                  onPress={() => router.push('/seller/store-location')}
+                >
+                  <Text className="text-white font-semibold text-sm">
+                    Cadastrar Localização
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* Lista de Produtos */}
+        <View className="flex-row items-center justify-between mb-4">
+          <Text className="text-frg900 font-bold text-xl">Meus Produtos</Text>
+          <TouchableOpacity
+            className="bg-frgprimary rounded-full px-4 py-2"
+            onPress={() => {
+              if (!hasStoreLocation) {
+                Alert.alert(
+                  'Localização da Loja Necessária',
+                  'Você precisa cadastrar a localização da sua loja antes de criar produtos.',
+                  [
+                    {
+                      text: 'Cadastrar Agora',
+                      onPress: () => router.push('/seller/store-location'),
+                    },
+                    { text: 'Cancelar', style: 'cancel' },
+                  ],
+                )
+              } else {
+                router.push('/seller/products/new')
+              }
+            }}
+          >
+            <View className="flex-row items-center">
+              <Ionicons name="add" size={18} color="white" />
+              <Text className="text-white font-semibold ml-1">Novo</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        {isLoading ? (
+          <View className="items-center py-8">
+            <Text className="text-system-text">Carregando produtos...</Text>
+          </View>
+        ) : produtos.length > 0 ? (
+          produtos.slice(0, 5).map((produto) => {
+            const principal =
+              produto.imagens?.find((img) => img?.tipo === 'principal')?.url ||
+              produto.imagens?.[0]?.url
+
+            return (
+              <TouchableOpacity
+                key={produto.id}
+                className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4"
+                onPress={() => router.push('/seller/products')}
+              >
+                <View className="flex-row">
+                  {principal ? (
+                    <Image
+                      source={{ uri: principal }}
+                      className="w-20 h-20 rounded-xl mr-4"
+                      resizeMode="cover"
+                      alt={produto.nome}
+                    />
+                  ) : (
+                    <View className="w-20 h-20 rounded-xl mr-4 bg-gray-200 items-center justify-center">
+                      <Ionicons
+                        name="image-outline"
+                        size={32}
+                        color="#9FABB9"
+                      />
+                    </View>
+                  )}
+                  <View className="flex-1">
+                    <View className="flex-row items-start justify-between mb-2">
+                      <View className="flex-1">
+                        <Text className="text-frg900 font-semibold text-base mb-1">
+                          {produto.nome}
+                        </Text>
+                        <Text className="text-frgprimary font-bold text-lg">
+                          {formatPrice(produto.preco)}
+                        </Text>
+                      </View>
+                      <View
+                        className={`px-3 py-1 rounded-full ${
+                          produto.estoque > 0 ? 'bg-green-100' : 'bg-gray-100'
+                        }`}
+                      >
+                        <Text
+                          className={`text-xs font-semibold ${
+                            produto.estoque > 0
+                              ? 'text-green-700'
+                              : 'text-gray-600'
+                          }`}
+                        >
+                          {produto.estoque > 0 ? 'Ativo' : 'Sem estoque'}
+                        </Text>
+                      </View>
+                    </View>
+                    <View className="flex-row items-center">
+                      <Ionicons name="cube-outline" size={14} color="#9FABB9" />
+                      <Text className="text-system-text text-sm ml-1">
+                        Estoque: {produto.estoque}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            )
+          })
+        ) : (
+          <View className="items-center py-12 bg-white rounded-2xl">
+            <Ionicons name="cube-outline" size={64} color="#9FABB9" />
+            <Text className="text-frg900 font-bold text-xl mt-4 mb-2">
+              Nenhum produto cadastrado
+            </Text>
+            <Text className="text-system-text text-center mb-6">
+              Comece cadastrando seu primeiro produto
+            </Text>
+            <TouchableOpacity
+              className="bg-frgprimary rounded-xl py-3 px-6"
+              onPress={() => {
+                if (!hasStoreLocation) {
+                  Alert.alert(
+                    'Localização da Loja Necessária',
+                    'Você precisa cadastrar a localização da sua loja antes de criar produtos.',
+                    [
+                      {
+                        text: 'Cadastrar Agora',
+                        onPress: () => router.push('/seller/store-location'),
+                      },
+                      { text: 'Cancelar', style: 'cancel' },
+                    ],
+                  )
+                } else {
+                  router.push('/seller/products/new')
+                }
+              }}
+            >
+              <Text className="text-white font-semibold">
+                Cadastrar Produto
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {produtos.length > 5 && (
+          <TouchableOpacity
+            className="bg-frgprimary rounded-xl py-4 mt-4"
+            onPress={() => router.push('/seller/products')}
+          >
+            <Text className="text-white text-center font-semibold">
+              Ver todos os produtos ({totalProdutos})
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
+      <View className="h-20" />
+    </ScrollView>
+  )
+}
 
 export default function HomeScreen() {
   const [searchText, setSearchText] = useState('')
@@ -337,20 +633,12 @@ export default function HomeScreen() {
           </View>
           <View className="flex-row items-center gap-3">
             {isVendedor ? (
-              <>
-                <TouchableOpacity
-                  className="bg-gray-100 rounded-full p-2"
-                  onPress={() => router.push('/seller/products')}
-                >
-                  <Ionicons name="cube-outline" size={20} color="#9FABB9" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  className="bg-gray-100 rounded-full p-2"
-                  onPress={() => router.push('/seller/categories')}
-                >
-                  <Ionicons name="grid-outline" size={20} color="#9FABB9" />
-                </TouchableOpacity>
-              </>
+              <TouchableOpacity
+                className="bg-gray-100 rounded-full p-2"
+                onPress={() => router.push('/seller/products')}
+              >
+                <Ionicons name="cube-outline" size={20} color="#9FABB9" />
+              </TouchableOpacity>
             ) : (
               <>
                 <TouchableOpacity
@@ -410,50 +698,7 @@ export default function HomeScreen() {
       </View>
 
       {isVendedor ? (
-        <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-          <View className="px-6 pt-6">
-            <TouchableOpacity
-              className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-4"
-              onPress={() => router.push('/seller/products')}
-            >
-              <View className="flex-row items-center">
-                <View className="bg-frgprimary/10 rounded-full p-4 mr-4">
-                  <Ionicons name="cube-outline" size={32} color="#437C99" />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-frg900 font-bold text-lg mb-1">
-                    Meus Produtos
-                  </Text>
-                  <Text className="text-system-text">
-                    Gerencie seus produtos cadastrados
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={24} color="#9FABB9" />
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-4"
-              onPress={() => router.push('/seller/categories')}
-            >
-              <View className="flex-row items-center">
-                <View className="bg-frgprimary/10 rounded-full p-4 mr-4">
-                  <Ionicons name="grid-outline" size={32} color="#437C99" />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-frg900 font-bold text-lg mb-1">
-                    Categorias
-                  </Text>
-                  <Text className="text-system-text">
-                    Gerencie as categorias de produtos
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={24} color="#9FABB9" />
-              </View>
-            </TouchableOpacity>
-          </View>
-          <View className="h-20" />
-        </ScrollView>
+        <SellerProductsDashboard />
       ) : (
         <PagerView
           ref={pagerRef}

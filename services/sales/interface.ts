@@ -72,18 +72,38 @@ export interface ProdutoListagemRes {
   totalPaginas: number
 }
 
-export interface ProdutoDetalheRes extends ProdutoRes {
-  variacoes: VariacaoRes[]
+export interface ProdutoDetalheRes {
+  avaliacaoMedia: string
+  descricao: string
+  descricaoCurta: string
+  estoque: number
+  id: string
   imagens: ImagemRes[]
+  nome: string
+  preco: string
+  precoPromocional: string
+  sku: string
+  totalAvaliacoes: number
+  uuid: string
+  variacoes: VariacaoRes[]
 }
 
 export interface CriarProdutoReq {
+  categoriaId: string
+  sku: string
   nome: string
-  descricao?: string
+  descricao: string
+  descricaoCurta: string
   preco: number
   precoPromocional?: number
-  categoriaId: string
+  pesoKg: number
+  alturaCm: number
+  larguraCm: number
+  profundidadeCm: number
   estoque: number
+  estoqueMinimo: number
+  tags?: string
+  destaque?: boolean
   ativo?: boolean
 }
 

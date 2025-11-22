@@ -93,3 +93,12 @@ export const maskCEP = (v: string | number): string => {
   const value = String(v).replace(/\D/g, '').slice(0, 8)
   return value
 }
+
+export const formatCNPJ = (v: string | number): string => {
+  const value = String(v).replace(/\D/g, '').slice(0, 14)
+  return value
+    .replace(/(\d{2})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1/$2')
+    .replace(/(\d{4})(\d)/, '$1-$2')
+}

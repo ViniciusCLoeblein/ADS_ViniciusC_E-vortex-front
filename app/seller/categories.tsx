@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { router } from 'expo-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useCustomerStore } from '@/stores/customer'
 import {
   listarCategorias,
   criarCategoria,
@@ -20,6 +21,55 @@ import {
 import type { CriarCategoriaReq } from '@/services/sales/interface'
 
 export default function SellerCategoriesScreen() {
+  const { profile } = useCustomerStore()
+  const isVendedor = profile?.tipo === 'vendedor'
+
+  useEffect(() => {
+    if (isVendedor) {
+      Alert.alert(
+        'Acesso restrito',
+        'Vendedores não podem gerenciar categorias. Apenas produtos.',
+        [
+          {
+            text: 'OK',
+            onPress: () => router.back(),
+          },
+        ],
+      )
+    }
+  }, [isVendedor])
+
+  if (isVendedor) {
+    return (
+      <SafeAreaView className="flex-1 bg-gray-50">
+        <View className="bg-white px-6 py-4 shadow-sm">
+          <View className="flex-row items-center justify-between">
+            <TouchableOpacity onPress={() => router.back()}>
+              <Ionicons name="arrow-back" size={24} color="#9FABB9" />
+            </TouchableOpacity>
+            <Text className="text-frg900 font-bold text-xl">Categorias</Text>
+            <View className="w-10" />
+          </View>
+        </View>
+        <View className="flex-1 items-center justify-center px-6">
+          <Ionicons name="lock-closed-outline" size={64} color="#9FABB9" />
+          <Text className="text-frg900 font-bold text-xl mt-4 mb-2">
+            Acesso Restrito
+          </Text>
+          <Text className="text-system-text text-center mb-6">
+            Vendedores não podem gerenciar categorias.{'\n'}
+            Você pode apenas cadastrar e gerenciar produtos.
+          </Text>
+          <TouchableOpacity
+            className="bg-frgprimary rounded-xl py-3 px-6"
+            onPress={() => router.back()}
+          >
+            <Text className="text-white font-semibold">Voltar</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    )
+  }
   const queryClient = useQueryClient()
   const [showNewCategory, setShowNewCategory] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState('')

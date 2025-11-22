@@ -2,16 +2,19 @@ import { View, Text, ScrollView, TouchableOpacity } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { router } from 'expo-router'
+import { useQueryClient } from '@tanstack/react-query'
 import { useCustomerStore } from '@/stores/customer'
 import { useAuthStore } from '@/stores/auth'
 import { maskCPF, maskPhone } from '@/constants/masks'
 
 export default function ProfileScreen() {
+  const queryClient = useQueryClient()
   const { profile } = useCustomerStore()
   const { clearAuth } = useAuthStore()
   const { clearProfile } = useCustomerStore()
 
   const handleLogout = () => {
+    queryClient.clear()
     clearAuth()
     clearProfile()
     router.replace('/login')

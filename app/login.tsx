@@ -12,21 +12,27 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { router, Link } from 'expo-router'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { login } from '@/services/auth'
 import { useAuthStore } from '@/stores/auth'
+import { useCustomerStore } from '@/stores/customer'
 import { Ionicons } from '@expo/vector-icons'
 
 export default function LoginScreen() {
+  const queryClient = useQueryClient()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const { setAuth } = useAuthStore()
+  const { clearProfile } = useCustomerStore()
 
   const { mutate: mutateLogin, isPending } = useMutation({
     mutationFn: login,
     onSuccess: (res) => {
+      clearProfile()
+      queryClient.clear()
       setAuth(res)
+      queryClient.invalidateQueries()
       router.replace('/home')
     },
     onError: () => {

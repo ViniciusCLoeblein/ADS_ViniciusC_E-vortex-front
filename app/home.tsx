@@ -19,6 +19,7 @@ import Toast from 'react-native-toast-message'
 import { useAuthStore } from '@/stores/auth'
 import { useCustomerStore } from '@/stores/customer'
 import { getCustomerProfile, listarEnderecos } from '@/services/customer'
+import { getSellerProfile } from '@/services/seller'
 import {
   listarProdutos,
   listarCategorias,
@@ -396,15 +397,23 @@ export default function HomeScreen() {
   )
   const pagerRef = useRef<PagerView>(null)
   const queryClient = useQueryClient()
-  const { setProfile, profile } = useCustomerStore()
+  const { setProfile, profile, clearProfile } = useCustomerStore()
   const { getTotalItems } = useCart()
+  const { accessToken } = useAuthStore()
 
   const isVendedor = profile?.tipo === 'vendedor'
 
   const { data: customerProfile, isLoading: isLoadingProfile } = useQuery({
     queryKey: ['customerProfile'],
     queryFn: getCustomerProfile,
-    enabled: !!useAuthStore.getState().accessToken && !isVendedor,
+    enabled: !!accessToken && !isVendedor,
+    retry: 1,
+  })
+
+  const { data: sellerProfile, isLoading: isLoadingSellerProfile } = useQuery({
+    queryKey: ['sellerProfile'],
+    queryFn: getSellerProfile,
+    enabled: !!accessToken && isVendedor,
     retry: 1,
   })
 
@@ -486,8 +495,36 @@ export default function HomeScreen() {
   useEffect(() => {
     if (customerProfile) {
       setProfile(customerProfile)
+    } else if (sellerProfile) {
+      // Converter SellerProfileRes para CustomerProfileRes para manter compatibilidade
+      setProfile({
+        id: sellerProfile.id,
+        uuid: sellerProfile.uuid,
+        nome: sellerProfile.nome,
+        email: sellerProfile.email,
+        cpf: sellerProfile.cpf,
+        tipo: 'vendedor',
+        telefone: sellerProfile.telefone,
+        emailVerificado: sellerProfile.emailVerificado,
+      })
+    } else if (
+      !isLoadingProfile &&
+      !isLoadingSellerProfile &&
+      accessToken &&
+      !profile
+    ) {
+      clearProfile()
     }
-  }, [customerProfile, setProfile])
+  }, [
+    customerProfile,
+    sellerProfile,
+    isLoadingProfile,
+    isLoadingSellerProfile,
+    accessToken,
+    profile,
+    setProfile,
+    clearProfile,
+  ])
 
   useEffect(() => {
     if (produtoDetalhe) {

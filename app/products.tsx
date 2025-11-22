@@ -22,7 +22,6 @@ import {
   removerFavorito,
   listarFavoritos,
   listarCategorias,
-  adicionarItemCarrinho,
   obterProduto,
 } from '@/services/sales'
 import type { ProdutoRes } from '@/services/sales/interface'
@@ -33,13 +32,19 @@ export default function ProductsScreen() {
   const [searchText, setSearchText] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>()
   const [currentPage, setCurrentPage] = useState(0)
-  const [selectedProductId, setSelectedProductId] = useState<string | null>(null)
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(
+    null,
+  )
   const [quantidade, setQuantidade] = useState(1)
   const pagerRef = useRef<PagerView>(null)
   const queryClient = useQueryClient()
   const { getTotalItems } = useCart()
 
-  const { data: produtosData, isLoading, refetch } = useQuery({
+  const {
+    data: produtosData,
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ['produtos', selectedCategory, searchText],
     queryFn: () =>
       listarProdutos({
@@ -74,17 +79,6 @@ export default function ProductsScreen() {
     },
   })
 
-  const addToCartMutation = useMutation({
-    mutationFn: adicionarItemCarrinho,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['carrinho'] })
-      Alert.alert('Sucesso', 'Produto adicionado ao carrinho!')
-    },
-    onError: () => {
-      Alert.alert('Erro', 'Não foi possível adicionar ao carrinho.')
-    },
-  })
-
   const { data: categoriasData } = useQuery({
     queryKey: ['categorias'],
     queryFn: listarCategorias,
@@ -104,11 +98,18 @@ export default function ProductsScreen() {
     }
   }
 
-  const handleAddToCart = (produto: ProdutoRes, qtd?: number) => {
-    addToCartMutation.mutate({
-      produtoId: produto.id,
-      quantidade: qtd || 1,
-    })
+  const { addToCart } = useCart()
+
+  const handleAddToCart = async (produto: ProdutoRes, qtd?: number) => {
+    try {
+      await addToCart({
+        produtoId: produto.id,
+        quantidade: qtd || 1,
+      })
+      Alert.alert('Sucesso', 'Produto adicionado ao carrinho!')
+    } catch (error) {
+      Alert.alert('Erro', 'Não foi possível adicionar ao carrinho.')
+    }
   }
 
   const handleViewProduct = (produtoId: string) => {
@@ -164,15 +165,22 @@ export default function ProductsScreen() {
         <View className="relative">
           <Image
             source={{
-              uri: item.imagemPrincipal || 'https://via.placeholder.com/200',
+              uri: item.imagens?.[0]?.url || 'https://via.placeholder.com/200',
             }}
             className="w-full h-32 rounded-xl mb-3"
             resizeMode="cover"
+            alt={item.nome}
           />
           {temDesconto && (
             <View className="absolute top-2 left-2 bg-red-500 px-2 py-1 rounded-lg">
               <Text className="text-white text-xs font-bold">
-                -{Math.round(((item.preco - precoFinal) / item.preco) * 100)}%
+                -
+                {Math.round(
+                  ((Number(item.preco) - Number(precoFinal)) /
+                    Number(item.preco)) *
+                    100,
+                )}
+                %
               </Text>
             </View>
           )}
@@ -183,7 +191,7 @@ export default function ProductsScreen() {
             <Ionicons
               name={isFavorite ? 'heart' : 'heart-outline'}
               size={16}
-              color={isFavorite ? '#EF4058' : '#EF4058'}
+              color={'#EF4058'}
             />
           </TouchableOpacity>
         </View>
@@ -198,18 +206,17 @@ export default function ProductsScreen() {
         <View className="flex-row items-center justify-between mb-2">
           <View className="flex-1">
             <Text className="text-frgprimary font-bold text-base">
-              {formatPrice(precoFinal)}
+              {formatPrice(Number(precoFinal))}
             </Text>
             {temDesconto && (
               <Text className="text-system-text text-xs line-through">
-                {formatPrice(item.preco)}
+                {formatPrice(Number(item.preco))}
               </Text>
             )}
           </View>
           <TouchableOpacity
             className="bg-frgprimary rounded-lg p-2"
             onPress={() => handleAddToCart(item)}
-            disabled={addToCartMutation.isPending}
           >
             <Ionicons name="add" size={16} color="white" />
           </TouchableOpacity>
@@ -228,15 +235,14 @@ export default function ProductsScreen() {
         selectedCategory === item.id ? 'bg-frgprimary' : 'bg-gray-100'
       }`}
       onPress={() =>
-        setSelectedCategory(
-          selectedCategory === item.id ? undefined : item.id,
-        )
+        setSelectedCategory(selectedCategory === item.id ? undefined : item.id)
       }
     >
       {item.imagem ? (
         <Image
           source={{ uri: item.imagem }}
           className="w-12 h-12 rounded-lg mb-2"
+          alt={item.nome}
         />
       ) : (
         <Ionicons
@@ -256,8 +262,7 @@ export default function ProductsScreen() {
   )
 
   const isFavoriteDetalhe =
-    produtoDetalhe &&
-    favoritosIds.has(produtoDetalhe.id)
+    produtoDetalhe && favoritosIds.has(produtoDetalhe.id)
 
   const precoFinalDetalhe =
     produtoDetalhe?.precoPromocional || produtoDetalhe?.preco || 0
@@ -300,8 +305,7 @@ export default function ProductsScreen() {
               <Text className="text-frg900 font-bold text-xl">Detalhes</Text>
               <TouchableOpacity
                 onPress={() =>
-                  produtoDetalhe &&
-                  handleToggleFavorite(produtoDetalhe.id)
+                  produtoDetalhe && handleToggleFavorite(produtoDetalhe.id)
                 }
               >
                 <Ionicons
@@ -334,7 +338,6 @@ export default function ProductsScreen() {
         initialPage={0}
         onPageSelected={handlePageSelected}
       >
-        {/* Página 0: Listagem */}
         <View key="0" style={{ flex: 1 }}>
           <ScrollView
             className="flex-1"
@@ -370,8 +373,7 @@ export default function ProductsScreen() {
                     Carregando produtos...
                   </Text>
                 </View>
-              ) : produtosData?.produtos &&
-                produtosData.produtos.length > 0 ? (
+              ) : produtosData?.produtos && produtosData.produtos.length > 0 ? (
                 <FlatList
                   data={produtosData.produtos}
                   renderItem={renderProduct}
@@ -393,7 +395,6 @@ export default function ProductsScreen() {
           </ScrollView>
         </View>
 
-        {/* Página 1: Detalhes */}
         <View key="1" style={{ flex: 1 }}>
           {isLoadingDetalhe ? (
             <View className="flex-1 items-center justify-center">
@@ -401,11 +402,7 @@ export default function ProductsScreen() {
             </View>
           ) : !produtoDetalhe ? (
             <View className="flex-1 items-center justify-center px-6">
-              <Ionicons
-                name="alert-circle-outline"
-                size={64}
-                color="#9FABB9"
-              />
+              <Ionicons name="alert-circle-outline" size={64} color="#9FABB9" />
               <Text className="text-frg900 font-bold text-xl mt-4 mb-2">
                 Produto não encontrado
               </Text>
@@ -417,17 +414,15 @@ export default function ProductsScreen() {
               </TouchableOpacity>
             </View>
           ) : (
-            <ScrollView
-              className="flex-1"
-              showsVerticalScrollIndicator={false}
-            >
+            <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
               <View className="bg-white mb-4">
                 <Image
                   source={{
                     uri:
-                      produtoDetalhe.imagemPrincipal ||
+                      produtoDetalhe.imagens?.[0]?.url ||
                       'https://via.placeholder.com/400',
                   }}
+                  alt={produtoDetalhe.nome}
                   className="w-full h-80"
                   resizeMode="cover"
                 />
@@ -447,26 +442,21 @@ export default function ProductsScreen() {
                 <View className="flex-row items-center mb-4">
                   <View className="flex-1">
                     <Text className="text-frgprimary font-bold text-3xl">
-                      {formatPrice(precoFinalDetalhe)}
+                      {formatPrice(Number(precoFinalDetalhe))}
                     </Text>
                     {temDescontoDetalhe && (
                       <Text className="text-system-text text-lg line-through">
-                        {formatPrice(produtoDetalhe.preco)}
+                        {formatPrice(Number(produtoDetalhe.preco))}
                       </Text>
                     )}
                   </View>
-                  {produtoDetalhe.categoria && (
-                    <View className="bg-frgprimary/10 rounded-full px-4 py-2">
-                      <Text className="text-frgprimary font-medium">
-                        {produtoDetalhe.categoria.nome}
-                      </Text>
-                    </View>
-                  )}
                 </View>
 
                 <View className="bg-gray-100 rounded-xl p-4 mb-4">
                   <View className="flex-row items-center justify-between mb-2">
-                    <Text className="text-frg900 font-semibold">Quantidade</Text>
+                    <Text className="text-frg900 font-semibold">
+                      Quantidade
+                    </Text>
                     <View className="flex-row items-center">
                       <TouchableOpacity
                         className="bg-gray-200 rounded-full w-8 h-8 items-center justify-center"
@@ -481,9 +471,23 @@ export default function ProductsScreen() {
                       </Text>
                       <TouchableOpacity
                         className="bg-frgprimary rounded-full w-8 h-8 items-center justify-center"
-                        onPress={() => setQuantidade(quantidade + 1)}
+                        onPress={() => {
+                          const estoqueDisponivel = produtoDetalhe.estoque || 0
+                          if (quantidade < estoqueDisponivel) {
+                            setQuantidade(quantidade + 1)
+                          }
+                        }}
+                        disabled={quantidade >= (produtoDetalhe.estoque || 0)}
                       >
-                        <Ionicons name="add" size={16} color="white" />
+                        <Ionicons
+                          name="add"
+                          size={16}
+                          color={
+                            quantidade >= (produtoDetalhe.estoque || 0)
+                              ? '#9FABB9'
+                              : 'white'
+                          }
+                        />
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -504,10 +508,13 @@ export default function ProductsScreen() {
                           className="bg-white rounded-xl p-3 mb-2 border border-gray-200"
                         >
                           <Text className="text-frg900 font-medium">
-                            {variacao.nome}
+                            {variacao.tipo}: {variacao.valor}
                           </Text>
                           <Text className="text-frgprimary font-semibold">
-                            {formatPrice(variacao.preco)}
+                            {variacao.precoAdicional &&
+                            Number(variacao.precoAdicional) > 0
+                              ? `+ ${formatPrice(Number(variacao.precoAdicional))}`
+                              : 'Sem adicional'}
                           </Text>
                         </View>
                       ))}
@@ -517,17 +524,12 @@ export default function ProductsScreen() {
                 <TouchableOpacity
                   className="bg-frgprimary rounded-xl py-4 mb-4"
                   onPress={() => handleAddToCart(produtoDetalhe, quantidade)}
-                  disabled={
-                    addToCartMutation.isPending ||
-                    produtoDetalhe.estoque === 0
-                  }
+                  disabled={produtoDetalhe.estoque === 0}
                 >
                   <Text className="text-white text-center text-lg font-semibold">
-                    {addToCartMutation.isPending
-                      ? 'Adicionando...'
-                      : produtoDetalhe.estoque === 0
-                        ? 'Sem estoque'
-                        : 'Adicionar ao Carrinho'}
+                    {produtoDetalhe.estoque === 0
+                      ? 'Sem estoque'
+                      : 'Adicionar ao Carrinho'}
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -540,4 +542,3 @@ export default function ProductsScreen() {
     </SafeAreaView>
   )
 }
-

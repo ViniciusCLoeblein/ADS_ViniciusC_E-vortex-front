@@ -19,17 +19,16 @@ import { useAuthStore } from '@/stores/auth'
 import { useCustomerStore } from '@/stores/customer'
 import { getCustomerProfile, listarEnderecos } from '@/services/customer'
 import {
-  obterCarrinho,
   listarProdutos,
   listarCategorias,
-  adicionarItemCarrinho,
   adicionarFavorito,
   removerFavorito,
   listarFavoritos,
   obterProduto,
 } from '@/services/sales'
-import type { ProdutoRes } from '@/services/sales/interface'
+import type { CategoriaRes, ProdutoRes } from '@/services/sales/interface'
 import { useBackHandler } from '@/hooks/indext'
+import { useCart } from '@/contexts/CartContext'
 
 function SellerProductsDashboard() {
   const { userId } = useAuthStore()
@@ -53,7 +52,8 @@ function SellerProductsDashboard() {
     queryFn: listarEnderecos,
   })
 
-  const hasStoreLocation = enderecosData?.enderecos && enderecosData.enderecos.length > 0
+  const hasStoreLocation =
+    enderecosData?.enderecos && enderecosData.enderecos.length > 0
 
   const formatPrice = (price: number | string) => {
     const value =
@@ -341,14 +341,9 @@ export default function HomeScreen() {
   const pagerRef = useRef<PagerView>(null)
   const queryClient = useQueryClient()
   const { setProfile, profile } = useCustomerStore()
+  const { getTotalItems } = useCart()
 
   const isVendedor = profile?.tipo === 'vendedor'
-
-  const { data: carrinho } = useQuery({
-    queryKey: ['carrinho'],
-    queryFn: obterCarrinho,
-    enabled: !isVendedor,
-  })
 
   const { data: customerProfile, isLoading: isLoadingProfile } = useQuery({
     queryKey: ['customerProfile'],
@@ -395,17 +390,6 @@ export default function HomeScreen() {
   const favoritosIds = new Set(
     favoritosData?.favoritos.map((f) => f.produtoId) || [],
   )
-
-  const addToCartMutation = useMutation({
-    mutationFn: adicionarItemCarrinho,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['carrinho'] })
-      Alert.alert('Sucesso', 'Produto adicionado ao carrinho!')
-    },
-    onError: () => {
-      Alert.alert('Erro', 'Não foi possível adicionar ao carrinho.')
-    },
-  })
 
   const addFavoriteMutation = useMutation({
     mutationFn: adicionarFavorito,
@@ -458,16 +442,23 @@ export default function HomeScreen() {
     }
   }
 
-  const handleAddToCart = (
+  const { addToCart } = useCart()
+
+  const handleAddToCart = async (
     produto: ProdutoRes,
     qtd?: number,
     variacaoId?: string | null,
   ) => {
-    addToCartMutation.mutate({
-      produtoId: produto.id,
-      quantidade: qtd || 1,
-      variacaoId: variacaoId || undefined,
-    })
+    try {
+      await addToCart({
+        produtoId: produto.id,
+        quantidade: qtd || 1,
+        variacaoId: variacaoId || undefined,
+      })
+      Alert.alert('Sucesso', 'Produto adicionado ao carrinho!')
+    } catch (error) {
+      Alert.alert('Erro', 'Não foi possível adicionar ao carrinho.')
+    }
   }
 
   const handleViewProduct = (produtoId: string) => {
@@ -578,7 +569,6 @@ export default function HomeScreen() {
           <TouchableOpacity
             className="bg-frgprimary rounded-lg p-2"
             onPress={() => handleAddToCart(item)}
-            disabled={addToCartMutation.isPending}
           >
             <Ionicons name="add" size={16} color="white" />
           </TouchableOpacity>
@@ -587,39 +577,33 @@ export default function HomeScreen() {
     )
   }
 
-  const renderCategory = ({
-    item,
-  }: {
-    item: { id: string; nome: string; imagem?: string }
-  }) => (
+  const renderCategory = ({ item }: { item: CategoriaRes }) => (
     <TouchableOpacity
-      className={`items-center p-4 rounded-xl mr-3 ${
-        selectedCategory === item.id ? 'bg-frgprimary' : 'bg-gray-100'
-      }`}
+      className="items-center justify-center mr-3 w-20 h-32"
       onPress={() =>
         setSelectedCategory(selectedCategory === item.id ? undefined : item.id)
       }
     >
-      {item.imagem ? (
-        <Image
-          source={{ uri: item.imagem }}
-          className="w-12 h-12 rounded-lg mb-2"
-          alt={item.nome}
-        />
-      ) : (
-        <Ionicons
-          name="grid-outline"
-          size={24}
-          color={selectedCategory === item.id ? 'white' : '#9FABB9'}
-        />
-      )}
-      <Text
-        className={`text-xs mt-2 font-medium ${
-          selectedCategory === item.id ? 'text-white' : 'text-system-text'
+      <View
+        className={`w-16 h-16 rounded-full items-center justify-center mb-3 ${
+          selectedCategory === item.id ? 'bg-frgprimary' : 'bg-gray-100'
         }`}
       >
-        {item.nome}
-      </Text>
+        <Ionicons
+          name={item.icone as keyof typeof Ionicons.glyphMap}
+          size={28}
+          color={item.cor_hex}
+        />
+      </View>
+
+      <View className="h-8 items-center justify-center w-16">
+        <Text
+          className="text-xs font-medium text-center text-system-text"
+          numberOfLines={2}
+        >
+          {item.nome}
+        </Text>
+      </View>
     </TouchableOpacity>
   )
 
@@ -652,12 +636,10 @@ export default function HomeScreen() {
                   onPress={() => router.push('/cart')}
                 >
                   <Ionicons name="cart-outline" size={20} color="#9FABB9" />
-                  {carrinho && carrinho.quantidadeItens > 0 && (
+                  {getTotalItems() > 0 && (
                     <View className="absolute -top-1 -right-1 bg-red-500 rounded-full w-5 h-5 items-center justify-center">
                       <Text className="text-white text-xs font-bold">
-                        {carrinho.quantidadeItens > 99
-                          ? '99+'
-                          : carrinho.quantidadeItens}
+                        {getTotalItems() > 99 ? '99+' : getTotalItems()}
                       </Text>
                     </View>
                   )}
@@ -705,6 +687,7 @@ export default function HomeScreen() {
           style={{ flex: 1 }}
           initialPage={0}
           onPageSelected={handlePageSelected}
+          scrollEnabled={!!selectedProductId}
         >
           <View key="0" style={{ flex: 1 }}>
             <ScrollView
@@ -951,9 +934,39 @@ export default function HomeScreen() {
                           </Text>
                           <TouchableOpacity
                             className="bg-frgprimary rounded-full w-8 h-8 items-center justify-center"
-                            onPress={() => setQuantidade(quantidade + 1)}
+                            onPress={() => {
+                              const estoqueDisponivel = selectedVariacaoId
+                                ? produtoDetalhe.variacoes?.find(
+                                    (v) => v.id === selectedVariacaoId,
+                                  )?.estoque || 0
+                                : produtoDetalhe.estoque || 0
+                              if (quantidade < estoqueDisponivel) {
+                                setQuantidade(quantidade + 1)
+                              }
+                            }}
+                            disabled={
+                              quantidade >=
+                              (selectedVariacaoId
+                                ? produtoDetalhe.variacoes?.find(
+                                    (v) => v.id === selectedVariacaoId,
+                                  )?.estoque || 0
+                                : produtoDetalhe.estoque || 0)
+                            }
                           >
-                            <Ionicons name="add" size={16} color="white" />
+                            <Ionicons
+                              name="add"
+                              size={16}
+                              color={
+                                quantidade >=
+                                (selectedVariacaoId
+                                  ? produtoDetalhe.variacoes?.find(
+                                      (v) => v.id === selectedVariacaoId,
+                                    )?.estoque || 0
+                                  : produtoDetalhe.estoque || 0)
+                                  ? '#9FABB9'
+                                  : 'white'
+                              }
+                            />
                           </TouchableOpacity>
                         </View>
                       </View>
@@ -1040,7 +1053,6 @@ export default function HomeScreen() {
                         )
                       }
                       disabled={
-                        addToCartMutation.isPending ||
                         produtoDetalhe.estoque === 0 ||
                         (produtoDetalhe.variacoes &&
                           produtoDetalhe.variacoes.length > 0 &&
@@ -1049,8 +1061,6 @@ export default function HomeScreen() {
                     >
                       <Text className="text-white text-center text-lg font-semibold">
                         {(() => {
-                          if (addToCartMutation.isPending)
-                            return 'Adicionando...'
                           if (produtoDetalhe.estoque === 0) return 'Sem estoque'
                           if (
                             produtoDetalhe.variacoes &&

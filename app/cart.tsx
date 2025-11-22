@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import {
   View,
   Text,
@@ -6,29 +7,32 @@ import {
   Image,
   Alert,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { router } from 'expo-router'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  obterCarrinho,
   atualizarItemCarrinho,
   removerItemCarrinho,
   limparCarrinho,
 } from '@/services/sales'
+import { useCart } from '@/contexts/CartContext'
 
 export default function CartScreen() {
   const queryClient = useQueryClient()
-
   const {
-    data: carrinho,
+    items,
     isLoading,
-    refetch,
-  } = useQuery({
-    queryKey: ['carrinho'],
-    queryFn: obterCarrinho,
-  })
+    updateQuantity,
+    removeFromCart,
+    clearCart,
+    syncCart,
+  } = useCart()
+  const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({})
+
+  console.log('items', items)
 
   const updateItemMutation = useMutation({
     mutationFn: ({
@@ -40,6 +44,7 @@ export default function CartScreen() {
     }) => atualizarItemCarrinho(itemId, { quantidade }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['carrinho'] })
+      syncCart()
     },
   })
 
@@ -47,6 +52,7 @@ export default function CartScreen() {
     mutationFn: removerItemCarrinho,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['carrinho'] })
+      syncCart()
     },
   })
 
@@ -54,20 +60,31 @@ export default function CartScreen() {
     mutationFn: limparCarrinho,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['carrinho'] })
+      clearCart()
+      Alert.alert('Sucesso', 'Carrinho limpo com sucesso!')
+    },
+    onError: () => {
+      clearCart()
       Alert.alert('Sucesso', 'Carrinho limpo com sucesso!')
     },
   })
 
-  const handleQuantityChange = (itemId: string, newQuantity: number) => {
+  const handleQuantityChange = async (itemId: string, newQuantity: number) => {
     if (newQuantity <= 0) {
-      removeItemMutation.mutate(itemId)
+      await removeFromCart(itemId)
+      if (!itemId.startsWith('local-')) {
+        removeItemMutation.mutate(itemId)
+      }
     } else {
-      updateItemMutation.mutate({ itemId, quantidade: newQuantity })
+      await updateQuantity(itemId, newQuantity)
+      if (!itemId.startsWith('local-')) {
+        updateItemMutation.mutate({ itemId, quantidade: newQuantity })
+      }
     }
   }
 
   const handleCheckout = () => {
-    if (!carrinho || carrinho.itens.length === 0) {
+    if (!items || items.length === 0) {
       Alert.alert(
         'Carrinho vazio',
         'Adicione produtos ao carrinho antes de finalizar a compra.',
@@ -85,7 +102,39 @@ export default function CartScreen() {
     }).format(price)
   }
 
-  if (!carrinho || carrinho.itens.length === 0) {
+  const getTotalPrice = () => {
+    return items.reduce(
+      (total, item) => total + item.precoUnitario * item.quantidade,
+      0,
+    )
+  }
+
+  const handleImageError = (itemId: string) => {
+    setImageErrors((prev) => ({ ...prev, [itemId]: true }))
+  }
+
+  if (isLoading) {
+    return (
+      <SafeAreaView className="flex-1 bg-gray-50">
+        <View className="bg-white px-6 py-4 shadow-sm">
+          <View className="flex-row items-center justify-between">
+            <TouchableOpacity onPress={() => router.back()}>
+              <Ionicons name="arrow-back" size={24} color="#9FABB9" />
+            </TouchableOpacity>
+            <Text className="text-frg900 font-bold text-xl">Carrinho</Text>
+            <View className="w-6" />
+          </View>
+        </View>
+
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color="#437C99" />
+          <Text className="text-system-text mt-4">Carregando carrinho...</Text>
+        </View>
+      </SafeAreaView>
+    )
+  }
+
+  if (!items || items.length === 0) {
     return (
       <SafeAreaView className="flex-1 bg-gray-50">
         <View className="bg-white px-6 py-4 shadow-sm">
@@ -123,7 +172,6 @@ export default function CartScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
-      {/* Header */}
       <View className="bg-white px-6 py-4 shadow-sm">
         <View className="flex-row items-center justify-between">
           <TouchableOpacity onPress={() => router.back()}>
@@ -155,30 +203,45 @@ export default function CartScreen() {
         className="flex-1"
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={isLoading} onRefresh={refetch} />
+          <RefreshControl refreshing={isLoading} onRefresh={syncCart} />
         }
       >
         <View className="px-6 py-4">
-          {isLoading ? (
-            <View className="items-center py-8">
-              <Text className="text-system-text">Carregando carrinho...</Text>
-            </View>
-          ) : (
-            carrinho?.itens.map((item) => (
+          {items.map((item) => {
+            const imagemPrincipal =
+              item.produto?.imagens?.find((img) => img?.tipo === 'principal')
+                ?.url || item.produto?.imagens?.[0]?.url
+
+            const hasImageError = imageErrors[item.id] || !imagemPrincipal
+
+            return (
               <View
                 key={item.id}
                 className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-4"
               >
                 <View className="flex-row">
-                  <Image
-                    source={{
-                      uri:
-                        item.produto?.imagemPrincipal ||
-                        'https://via.placeholder.com/100',
-                    }}
-                    className="w-20 h-20 rounded-xl mr-4"
-                    resizeMode="cover"
-                  />
+                  <View className="w-20 h-20 rounded-xl mr-4 overflow-hidden bg-gray-100 items-center justify-center">
+                    {hasImageError ? (
+                      <View className="w-full h-full items-center justify-center">
+                        <Ionicons
+                          name="image-outline"
+                          size={24}
+                          color="#9FABB9"
+                        />
+                        <Text className="text-xs text-system-text mt-1 text-center px-1">
+                          Erro
+                        </Text>
+                      </View>
+                    ) : (
+                      <Image
+                        source={{ uri: imagemPrincipal }}
+                        className="w-full h-full"
+                        resizeMode="cover"
+                        onError={() => handleImageError(item.id)}
+                        alt={item.produto?.nome || 'Produto'}
+                      />
+                    )}
+                  </View>
 
                   <View className="flex-1">
                     <Text
@@ -187,6 +250,12 @@ export default function CartScreen() {
                     >
                       {item.produto?.nome || 'Produto'}
                     </Text>
+
+                    {item.variacao && (
+                      <Text className="text-system-text text-sm mb-1">
+                        {item.variacao.tipo}: {item.variacao.valor}
+                      </Text>
+                    )}
 
                     <View className="flex-row items-center justify-between">
                       <View>
@@ -230,20 +299,18 @@ export default function CartScreen() {
                   </View>
                 </View>
               </View>
-            ))
-          )}
+            )
+          })}
         </View>
 
-        {/* Bottom Spacing */}
         <View className="h-32" />
       </ScrollView>
 
-      {/* Checkout Footer */}
       <View className="bg-white border-t border-gray-200 px-6 py-4">
         <View className="flex-row items-center justify-between mb-4">
           <Text className="text-frg900 font-semibold text-lg">Total:</Text>
           <Text className="text-frgprimary font-bold text-2xl">
-            {carrinho ? formatPrice(carrinho.total) : 'R$ 0,00'}
+            {formatPrice(getTotalPrice())}
           </Text>
         </View>
 

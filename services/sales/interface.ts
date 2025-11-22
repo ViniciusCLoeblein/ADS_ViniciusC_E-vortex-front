@@ -154,13 +154,15 @@ export interface FavoritosRes {
 }
 
 export interface CategoriaRes {
+  ativo: boolean
+  atualizado_em: string
+  categoria_pai_id: string
+  cor_hex: string
+  criado_em: string
+  descricao: string
+  icone: string
   id: string
   nome: string
-  descricao?: string
-  imagem?: string
-  ativa: boolean
-  createdAt: string
-  updatedAt: string
 }
 
 export interface ListaCategoriasRes {

@@ -6,3 +6,4 @@ export async function getSellerProfile(): Promise<SellerProfileRes> {
   return response.data
 }
 
+

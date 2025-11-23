@@ -3,7 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { router } from 'expo-router'
 import { useQuery } from '@tanstack/react-query'
-import { obterVendedor } from '@/services/sales'
+import { obterVendedorUsuario } from '@/services/sales'
 import { useAuthStore } from '@/stores/auth'
 import { useCustomerStore } from '@/stores/customer'
 
@@ -13,7 +13,7 @@ export default function MyCompanyScreen() {
 
   const { data: vendedorData, isLoading } = useQuery({
     queryKey: ['vendedor', userId],
-    queryFn: () => obterVendedor(userId!),
+    queryFn: () => obterVendedorUsuario(userId!),
     enabled: !!userId && !!profile && profile.tipo === 'vendedor',
   })
 

@@ -103,6 +103,7 @@ export default function RootLayout() {
     'seller/my-company',
     'checkout',
     'order-success',
+    'forgot-password',
   ]
 
   return (

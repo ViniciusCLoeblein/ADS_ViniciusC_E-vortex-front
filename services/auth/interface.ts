@@ -44,3 +44,23 @@ export interface RegisterSellerRes {
   accessTokenExpiresAt: string
   status: string
 }
+
+export interface RequestPasswordResetTokenReq {
+  email: string
+}
+
+export interface RequestPasswordResetTokenRes {
+  telefone: string
+  token: string
+}
+
+export interface ValidatePasswordResetTokenReq {
+  email: string
+  token: string
+}
+
+export interface ResetPasswordReq {
+  email: string
+  token: string
+  novaSenha: string
+}

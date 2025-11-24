@@ -159,6 +159,7 @@ export default function SellerProductsScreen() {
           ? Number(produtoEdit.precoPromocional)
           : undefined,
         estoque: produtoEdit.estoque,
+        ativo: produtoEdit.ativo,
       })
       setNewImages([])
       setImageErrors(new Set())

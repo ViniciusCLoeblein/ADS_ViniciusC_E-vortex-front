@@ -10,7 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Link, router } from 'expo-router'
 import PagerView from 'react-native-pager-view'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   RegisterHeader,
   TabSelector,
@@ -18,22 +18,24 @@ import {
   SellerForm,
 } from '@/components'
 import { login } from '@/services/auth'
+import { useAuthStore } from '@/stores/auth'
+import { useCustomerStore } from '@/stores/customer'
 
 export default function RegisterScreen() {
   const [activeTab, setActiveTab] = useState<'customer' | 'seller'>('customer')
   const pagerRef = useRef<PagerView>(null)
+  const queryClient = useQueryClient()
+  const { setAuth } = useAuthStore()
+  const { clearProfile } = useCustomerStore()
 
   const loginMutation = useMutation({
     mutationFn: login,
-    onSuccess: () => {
-      Alert.alert('Sucesso', 'Login realizado com sucesso!', [
-        {
-          text: 'OK',
-          onPress: () => {
-            router.replace('/home')
-          },
-        },
-      ])
+    onSuccess: (res) => {
+      clearProfile()
+      queryClient.clear()
+      setAuth(res)
+      queryClient.invalidateQueries()
+      router.replace('/home')
     },
     onError: (error: unknown) => {
       const errorMessage =

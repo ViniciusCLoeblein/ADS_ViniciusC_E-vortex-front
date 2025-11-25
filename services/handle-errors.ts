@@ -6,7 +6,7 @@ export const handleUnauthorizedError = (
   error: AxiosError<ApiErrorResponse>,
 ): string => {
   const url = error?.response?.config?.url
-  const urlIgnore = ['/auth/login']
+  const urlIgnore = ['/auth/login', '/auth/register', '/auth/register/vendedor']
 
   const message = Array.isArray(error?.response?.data?.message)
     ? error.response.data.message.join(' | ')
@@ -20,7 +20,9 @@ export const handleUnauthorizedError = (
   if (urlIgnore.includes(url ?? '')) {
     return ''
   } else {
-    Linking.openURL('evortex://login')
+    if (!url?.includes('/auth/')) {
+      Linking.openURL('evortex://login')
+    }
     return msg.replace('UnauthorizedException:', '').trim()
   }
 }

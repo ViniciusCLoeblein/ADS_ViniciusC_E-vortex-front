@@ -17,6 +17,7 @@ import {
   obterCarrinho,
   limparCarrinho,
   listarImagensProduto,
+  obterVendedorUsuario,
 } from '@/services/sales'
 import {
   listarEnderecos,
@@ -24,6 +25,7 @@ import {
   criarPedido,
 } from '@/services/customer'
 import { EnderecoRes } from '@/services/customer/interface'
+import { calcularFrete } from '@/lib/utils'
 
 interface ProductImageProps {
   readonly produtoId: string
@@ -86,6 +88,8 @@ export default function CheckoutScreen() {
   const [isProcessing, setIsProcessing] = useState(false)
   const [selectedEndereco, setSelectedEndereco] = useState<string | null>(null)
   const [selectedCartao, setSelectedCartao] = useState<string | null>(null)
+  const [valorFrete, setValorFrete] = useState<number>(0)
+  const [isCalculandoFrete, setIsCalculandoFrete] = useState(false)
 
   const {
     data: carrinho,
@@ -158,6 +162,78 @@ export default function CheckoutScreen() {
       }
     }
   }, [enderecosData, cartoesData, selectedEndereco, selectedCartao])
+
+  // Query para buscar dados do vendedor
+  const vendedorId = carrinho?.itens?.[0]?.produto?.vendedorId
+  const { data: vendedorData } = useQuery({
+    queryKey: ['vendedor', vendedorId],
+    queryFn: () => obterVendedorUsuario(vendedorId!),
+    enabled: !!vendedorId,
+  })
+
+  // Query para buscar endereços do vendedor (assumindo que há uma API para isso)
+  // Como não temos essa API, vamos usar uma abordagem alternativa:
+  // Vamos buscar o endereço através do vendedorId usando uma query customizada
+  // Por enquanto, vamos usar uma solução temporária: buscar o CEP através do vendedor
+
+  // Calcula o frete quando o endereço é selecionado ou o carrinho muda
+  useEffect(() => {
+    const calcularFreteAtual = async () => {
+      if (
+        !selectedEndereco ||
+        !carrinho ||
+        !carrinho.itens ||
+        carrinho.itens.length === 0
+      ) {
+        setValorFrete(0)
+        return
+      }
+
+      // Pega o vendedorId do primeiro item (assumindo que todos são do mesmo vendedor)
+      const vendedorIdItem = carrinho.itens[0]?.produto?.vendedorId
+      if (!vendedorIdItem) {
+        setValorFrete(0)
+        return
+      }
+
+      // Busca o endereço selecionado do cliente
+      const enderecoCliente = enderecosData?.enderecos?.find(
+        (e) => e.id === selectedEndereco,
+      )
+
+      if (!enderecoCliente) {
+        setValorFrete(0)
+        return
+      }
+
+      setIsCalculandoFrete(true)
+      try {
+        // TODO: Implementar API para buscar endereço da loja do vendedor
+        // Por enquanto, vamos usar uma solução temporária:
+        // O endereço da loja deveria ser buscado através de uma API que retorna
+        // o endereço com apelido "Localização da Loja" do vendedor específico
+        // Exemplo: GET /customer/enderecos/vendedor/{vendedorId}
+
+        // Solução temporária: usar CEP padrão
+        // Em produção, isso deve ser substituído por uma busca real do endereço da loja
+        const cepLoja = '99062570' // CEP padrão temporário
+
+        const frete = await calcularFrete(cepLoja, enderecoCliente.cep)
+        setValorFrete(frete)
+      } catch (error) {
+        console.error('Erro ao calcular frete:', error)
+        setValorFrete(0)
+        Alert.alert(
+          'Aviso',
+          'Não foi possível calcular o frete. O valor será R$ 0,00.',
+        )
+      } finally {
+        setIsCalculandoFrete(false)
+      }
+    }
+
+    calcularFreteAtual()
+  }, [selectedEndereco, carrinho, enderecosData, vendedorData])
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -371,7 +447,7 @@ export default function CheckoutScreen() {
         enderecoEntregaId: selectedEndereco,
         cartaoCreditoId: selectedCartao,
         metodoPagamento: 'cartao',
-        frete: 0,
+        frete: valorFrete,
         desconto: 0,
         itens,
       })
@@ -510,6 +586,44 @@ export default function CheckoutScreen() {
             </View>
 
             {renderCartoes()}
+          </View>
+
+          <View className="bg-white rounded-2xl p-6 mb-6 shadow-sm border border-gray-100">
+            <Text className="text-frg900 font-bold text-lg mb-4">
+              Resumo do Pedido
+            </Text>
+
+            <View className="flex-row justify-between mb-2">
+              <Text className="text-system-text">Subtotal:</Text>
+              <Text className="text-frg900 font-semibold">
+                {formatPrice(carrinho.total)}
+              </Text>
+            </View>
+
+            <View className="flex-row justify-between mb-2">
+              <View className="flex-row items-center">
+                <Text className="text-system-text">Frete:</Text>
+                {isCalculandoFrete && (
+                  <ActivityIndicator
+                    size="small"
+                    color="#437C99"
+                    style={{ marginLeft: 8 }}
+                  />
+                )}
+              </View>
+              <Text className="text-frg900 font-semibold">
+                {isCalculandoFrete ? 'Calculando...' : formatPrice(valorFrete)}
+              </Text>
+            </View>
+
+            <View className="border-t border-gray-200 pt-3 mt-3">
+              <View className="flex-row justify-between">
+                <Text className="text-frg900 font-bold text-lg">Total:</Text>
+                <Text className="text-frgprimary font-bold text-xl">
+                  {formatPrice(carrinho.total + valorFrete)}
+                </Text>
+              </View>
+            </View>
           </View>
 
           <View className="h-14" />

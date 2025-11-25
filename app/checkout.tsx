@@ -163,7 +163,6 @@ export default function CheckoutScreen() {
     }
   }, [enderecosData, cartoesData, selectedEndereco, selectedCartao])
 
-  // Query para buscar dados do vendedor
   const vendedorId = carrinho?.itens?.[0]?.produto?.vendedorId
   const { data: vendedorData } = useQuery({
     queryKey: ['vendedor', vendedorId],
@@ -216,7 +215,7 @@ export default function CheckoutScreen() {
 
         // Solução temporária: usar CEP padrão
         // Em produção, isso deve ser substituído por uma busca real do endereço da loja
-        const cepLoja = '99062570' // CEP padrão temporário
+        const cepLoja = '99001970' // CEP padrão temporário
 
         const frete = await calcularFrete(cepLoja, enderecoCliente.cep)
         setValorFrete(frete)

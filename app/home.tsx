@@ -633,13 +633,14 @@ export default function HomeScreen() {
 
     return (
       <TouchableOpacity
-        className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mr-4 w-48"
+        className="bg-white rounded-2xl shadow-sm border border-gray-100 p-3 mb-4"
+        style={{ minHeight: 240 }}
         onPress={() => handleViewProduct(item.id)}
       >
-        <View className="relative">
+        <View className="relative mb-2">
           <ProductImage
             produtoId={item.id}
-            className="w-full h-32 rounded-xl mb-3"
+            className="w-full h-40 rounded-xl"
             resizeMode="cover"
             alt={item.nome}
           />
@@ -655,35 +656,34 @@ export default function HomeScreen() {
             </View>
           )}
           <TouchableOpacity
-            className="absolute top-2 right-2 bg-white rounded-full p-2 shadow-sm"
+            className="absolute top-2 right-2 bg-white rounded-full p-1.5 shadow-sm"
             onPress={() => handleToggleFavorite(item.id)}
           >
             <Ionicons
               name={isFavorite ? 'heart' : 'heart-outline'}
-              size={16}
+              size={14}
               color="#EF4058"
             />
           </TouchableOpacity>
         </View>
 
-        <Text
-          className="text-frg900 font-semibold text-sm mb-1"
-          numberOfLines={2}
-        >
-          {item.nome}
-        </Text>
+        <View style={{ minHeight: 40, marginBottom: 8 }}>
+          <Text className="text-frg900 font-semibold text-sm" numberOfLines={2}>
+            {item.nome}
+          </Text>
+        </View>
 
-        <View className="flex-row items-center justify-between mb-2">
-          <View className="flex-1">
-            <Text className="text-frgprimary font-bold text-base">
-              {formatPrice(precoFinal)}
+        <View style={{ minHeight: 32 }}>
+          <Text className="text-frgprimary font-bold text-sm">
+            {formatPrice(precoFinal)}
+          </Text>
+          {temDesconto ? (
+            <Text className="text-system-text text-xs line-through">
+              {formatPrice(item.preco)}
             </Text>
-            {temDesconto && (
-              <Text className="text-system-text text-xs line-through">
-                {formatPrice(item.preco)}
-              </Text>
-            )}
-          </View>
+          ) : (
+            <View style={{ height: 14 }} />
+          )}
         </View>
       </TouchableOpacity>
     )
@@ -857,13 +857,13 @@ export default function HomeScreen() {
                     produtosData.produtos.length > 0
                   ) {
                     return (
-                      <FlatList
-                        data={produtosData.produtos}
-                        renderItem={renderProduct}
-                        keyExtractor={(item) => item.id}
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                      />
+                      <View className="flex-row flex-wrap -mx-1">
+                        {produtosData.produtos.map((item) => (
+                          <View key={item.id} className="w-1/2 px-1">
+                            {renderProduct({ item })}
+                          </View>
+                        ))}
+                      </View>
                     )
                   }
                   return (

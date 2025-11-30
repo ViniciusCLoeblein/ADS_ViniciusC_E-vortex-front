@@ -1,3 +1,4 @@
+import { buscarCep } from '@/services/brasilapi'
 import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
@@ -302,4 +303,86 @@ export const capitalizeWords = (text: string): string => {
  */
 export const toTitleCase = (text: string): string => {
   return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase()
+}
+
+/**
+ * Calcula a distância entre duas coordenadas usando a fórmula de Haversine
+ * @param lat1 Latitude do ponto 1
+ * @param lon1 Longitude do ponto 1
+ * @param lat2 Latitude do ponto 2
+ * @param lon2 Longitude do ponto 2
+ * @returns Distância em quilômetros
+ */
+export const calcularDistanciaKm = (
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
+): number => {
+  const R = 6371 // Raio da Terra em km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180
+  const dLon = ((lon2 - lon1) * Math.PI) / 180
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  const distancia = R * c
+  return Math.round(distancia * 100) / 100
+}
+
+/**
+ * Calcula o frete baseado na distância entre dois CEPs
+ * @param cepOrigem CEP de origem (loja/vendedor)
+ * @param cepDestino CEP de destino (cliente)
+ * @returns Valor do frete em reais (R$ 5,00 por km)
+ */
+export const calcularFrete = async (
+  cepOrigem: string,
+  cepDestino: string,
+): Promise<number> => {
+  try {
+    const cepOrigemLimpo = cepOrigem.replace(/\D/g, '')
+    const cepDestinoLimpo = cepDestino.replace(/\D/g, '')
+    const valorFretePorKm = 5
+
+    if (cepOrigemLimpo.length !== 8 || cepDestinoLimpo.length !== 8) {
+      throw new Error('CEPs devem conter 8 dígitos')
+    }
+
+    const [origemData, destinoData] = await Promise.all([
+      buscarCep(cepOrigemLimpo),
+      buscarCep(cepDestinoLimpo),
+    ])
+
+    if (
+      !origemData.location?.coordinates?.latitude ||
+      !origemData.location?.coordinates?.longitude ||
+      !destinoData.location?.coordinates?.latitude ||
+      !destinoData.location?.coordinates?.longitude
+    ) {
+      throw new Error('Coordenadas não encontradas para um ou ambos os CEPs')
+    }
+
+    const latOrigem = parseFloat(origemData.location.coordinates.latitude)
+    const lonOrigem = parseFloat(origemData.location.coordinates.longitude)
+    const latDestino = parseFloat(destinoData.location.coordinates.latitude)
+    const lonDestino = parseFloat(destinoData.location.coordinates.longitude)
+
+    const distanciaKm = calcularDistanciaKm(
+      latOrigem,
+      lonOrigem,
+      latDestino,
+      lonDestino,
+    )
+
+    const valorFrete = distanciaKm * valorFretePorKm
+
+    return Math.round(valorFrete * 100) / 100
+  } catch (error) {
+    console.error('Erro ao calcular frete:', error)
+    throw error
+  }
 }

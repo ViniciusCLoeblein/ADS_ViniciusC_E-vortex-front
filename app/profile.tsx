@@ -14,8 +14,9 @@ export default function ProfileScreen() {
   const { clearProfile } = useCustomerStore()
 
   const handleLogout = () => {
-    queryClient.clear()
     clearAuth()
+    queryClient.cancelQueries()
+    queryClient.resetQueries()
     clearProfile()
     router.replace('/login')
   }

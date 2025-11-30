@@ -31,13 +31,13 @@ import type {
 const formatMoneyInput = (value: string): string => {
   // Remove tudo exceto números
   const numbers = value.replace(/\D/g, '')
-  
+
   if (!numbers) return ''
-  
+
   // Converte para centavos e depois formata
   const cents = parseInt(numbers, 10)
   const reais = cents / 100
-  
+
   // Formata como R$ X.XXX,XX
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -58,17 +58,17 @@ const parseMoneyInput = (value: string): number => {
 // Função para gerar sugestão de SKU baseado no nome
 const generateSKUSuggestion = (nome: string): string => {
   if (!nome) return ''
-  
+
   // Remove acentos e caracteres especiais
   const normalized = nome
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .toUpperCase()
-  
+
   // Pega as primeiras letras de cada palavra
   const words = normalized.split(' ').filter((w) => w.length > 0)
   let sku = ''
-  
+
   if (words.length === 1) {
     // Se só uma palavra, pega as primeiras 4 letras
     sku = words[0].substring(0, 4)
@@ -76,7 +76,7 @@ const generateSKUSuggestion = (nome: string): string => {
     // Se múltiplas palavras, pega a primeira letra de cada
     sku = words.map((w) => w[0]).join('')
   }
-  
+
   // Adiciona timestamp para garantir unicidade
   const timestamp = Date.now().toString().slice(-4)
   return `${sku}-${timestamp}`
@@ -137,7 +137,8 @@ export default function NewProductScreen() {
     queryFn: listarEnderecos,
   })
 
-  const hasStoreLocation = enderecosData?.enderecos && enderecosData.enderecos.length > 0
+  const hasStoreLocation =
+    enderecosData?.enderecos && enderecosData.enderecos.length > 0
 
   useEffect(() => {
     if (!isLoadingEnderecos && !hasStoreLocation) {
@@ -180,19 +181,24 @@ export default function NewProductScreen() {
       // Se houver imagens selecionadas, fazer upload de todas
       if (selectedImages.length > 0 && data.id) {
         const uploadPromises = selectedImages.map((image, index) => {
-          return uploadImageMutation.mutateAsync({
-            produtoId: data.id,
-            tipo: index === 0 ? 'principal' : 'galeria',
-            file: {
-              uri: image.uri,
-              type: 'image/jpeg',
-              name: `product-image-${index}.jpg`,
-            },
-            ordem: index + 1,
-          }).catch((error) => {
-            console.error(`Erro ao fazer upload da imagem ${index + 1}:`, error)
-            return null
-          })
+          return uploadImageMutation
+            .mutateAsync({
+              produtoId: data.id,
+              tipo: index === 0 ? 'principal' : 'galeria',
+              file: {
+                uri: image.uri,
+                type: 'image/jpeg',
+                name: `product-image-${index}.jpg`,
+              },
+              ordem: index + 1,
+            })
+            .catch((error) => {
+              console.error(
+                `Erro ao fazer upload da imagem ${index + 1}:`,
+                error,
+              )
+              return null
+            })
         })
 
         await Promise.all(uploadPromises)
@@ -201,13 +207,15 @@ export default function NewProductScreen() {
       // Se houver variações, criar todas
       if (variacoes.length > 0 && data.id) {
         const variacaoPromises = variacoes.map((variacao) => {
-          return createVariacaoMutation.mutateAsync({
-            ...variacao,
-            produtoId: data.id,
-          }).catch((error) => {
-            console.error('Erro ao criar variação:', error)
-            return null
-          })
+          return createVariacaoMutation
+            .mutateAsync({
+              ...variacao,
+              produtoId: data.id,
+            })
+            .catch((error) => {
+              console.error('Erro ao criar variação:', error)
+              return null
+            })
         })
 
         await Promise.all(variacaoPromises)
@@ -368,9 +376,7 @@ export default function NewProductScreen() {
             <TouchableOpacity onPress={() => router.back()}>
               <Ionicons name="arrow-back" size={24} color="#9FABB9" />
             </TouchableOpacity>
-            <Text className="text-frg900 font-bold text-xl">
-              Novo Produto
-            </Text>
+            <Text className="text-frg900 font-bold text-xl">Novo Produto</Text>
             <View className="w-10" />
           </View>
         </View>
@@ -412,9 +418,7 @@ export default function NewProductScreen() {
             <TouchableOpacity onPress={() => router.back()}>
               <Ionicons name="arrow-back" size={24} color="#9FABB9" />
             </TouchableOpacity>
-            <Text className="text-frg900 font-bold text-xl">
-              Novo Produto
-            </Text>
+            <Text className="text-frg900 font-bold text-xl">Novo Produto</Text>
             <View className="w-10" />
           </View>
         </View>
@@ -438,13 +442,21 @@ export default function NewProductScreen() {
                       className="bg-gray-100 rounded-xl px-4 py-2"
                       onPress={pickImages}
                     >
-                      <Ionicons name="images-outline" size={20} color="#437C99" />
+                      <Ionicons
+                        name="images-outline"
+                        size={20}
+                        color="#437C99"
+                      />
                     </TouchableOpacity>
                     <TouchableOpacity
                       className="bg-gray-100 rounded-xl px-4 py-2"
                       onPress={takePhoto}
                     >
-                      <Ionicons name="camera-outline" size={20} color="#437C99" />
+                      <Ionicons
+                        name="camera-outline"
+                        size={20}
+                        color="#437C99"
+                      />
                     </TouchableOpacity>
                   </View>
                 )}
@@ -460,7 +472,10 @@ export default function NewProductScreen() {
                     {selectedImages.map((image, index) => {
                       const hasError = imageErrors.has(image.uri)
                       return (
-                        <View key={`${image.uri}-${index}`} className="relative">
+                        <View
+                          key={`${image.uri}-${index}`}
+                          className="relative"
+                        >
                           <View className="w-32 h-32 rounded-xl overflow-hidden border border-gray-200">
                             {hasError ? (
                               <View className="w-full h-full bg-gray-200 items-center justify-center">
@@ -568,7 +583,11 @@ export default function NewProductScreen() {
                       setFormData({ ...formData, sku: suggestion })
                     }}
                   >
-                    <Ionicons name="refresh-outline" size={20} color="#437C99" />
+                    <Ionicons
+                      name="refresh-outline"
+                      size={20}
+                      color="#437C99"
+                    />
                   </TouchableOpacity>
                 </View>
                 <Text className="text-system-text text-xs mt-1">
@@ -645,7 +664,9 @@ export default function NewProductScreen() {
               </View>
 
               <View className="mb-4">
-                <Text className="text-frg900 font-medium mb-2">Categoria *</Text>
+                <Text className="text-frg900 font-medium mb-2">
+                  Categoria *
+                </Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                   {categorias?.categorias.map((cat) => (
                     <TouchableOpacity
@@ -710,60 +731,90 @@ export default function NewProductScreen() {
               </View>
 
               <View className="mb-4">
-                <Text className="text-frg900 font-medium mb-2">Peso (kg) *</Text>
+                <Text className="text-frg900 font-medium mb-2">Peso (kg)</Text>
                 <TextInput
                   className="bg-inputbg border border-gray-200 rounded-xl px-4 py-3 text-base"
                   placeholder="0.00"
-                  value={
-                    formData.pesoKg > 0 ? formData.pesoKg.toString() : ''
-                  }
+                  value={formData.pesoKg > 0 ? formData.pesoKg.toString() : ''}
                   onChangeText={(text) => {
-                    const value = parseFloat(text.replace(/[^0-9.]/g, '')) || 0
+                    // Permite números e ponto decimal, mas apenas um ponto
+                    const cleaned = text.replace(/[^0-9.]/g, '')
+                    const parts = cleaned.split('.')
+                    let formatted = parts[0] || ''
+                    if (parts.length > 1) {
+                      formatted += '.' + parts.slice(1).join('').substring(0, 2)
+                    }
+                    const value = formatted ? parseFloat(formatted) : 0
                     setFormData({ ...formData, pesoKg: value })
                   }}
                   keyboardType="decimal-pad"
                 />
+                <Text className="text-system-text text-xs mt-1">
+                  Opcional - necessário apenas para cálculo de frete
+                </Text>
               </View>
 
               <View className="mb-4">
                 <Text className="text-frg900 font-medium mb-2">
-                  Dimensões (cm) *
+                  Dimensões (cm)
+                </Text>
+                <Text className="text-system-text text-xs mb-3">
+                  Opcional - preencha apenas os campos relevantes para seu
+                  produto
                 </Text>
                 <View className="flex-row gap-2">
                   <View className="flex-1">
-                    <Text className="text-system-text text-xs mb-1">Altura</Text>
+                    <Text className="text-system-text text-xs mb-1">
+                      Altura
+                    </Text>
                     <TextInput
                       className="bg-inputbg border border-gray-200 rounded-xl px-4 py-3 text-base"
-                      placeholder="0"
+                      placeholder="0.00"
                       value={
                         formData.alturaCm > 0
                           ? formData.alturaCm.toString()
                           : ''
                       }
                       onChangeText={(text) => {
-                        const value =
-                          parseInt(text.replace(/[^0-9]/g, '')) || 0
+                        // Permite números e ponto decimal, mas apenas um ponto
+                        const cleaned = text.replace(/[^0-9.]/g, '')
+                        const parts = cleaned.split('.')
+                        let formatted = parts[0] || ''
+                        if (parts.length > 1) {
+                          formatted +=
+                            '.' + parts.slice(1).join('').substring(0, 2)
+                        }
+                        const value = formatted ? parseFloat(formatted) : 0
                         setFormData({ ...formData, alturaCm: value })
                       }}
-                      keyboardType="numeric"
+                      keyboardType="decimal-pad"
                     />
                   </View>
                   <View className="flex-1">
-                    <Text className="text-system-text text-xs mb-1">Largura</Text>
+                    <Text className="text-system-text text-xs mb-1">
+                      Largura
+                    </Text>
                     <TextInput
                       className="bg-inputbg border border-gray-200 rounded-xl px-4 py-3 text-base"
-                      placeholder="0"
+                      placeholder="0.00"
                       value={
                         formData.larguraCm > 0
                           ? formData.larguraCm.toString()
                           : ''
                       }
                       onChangeText={(text) => {
-                        const value =
-                          parseInt(text.replace(/[^0-9]/g, '')) || 0
+                        // Permite números e ponto decimal, mas apenas um ponto
+                        const cleaned = text.replace(/[^0-9.]/g, '')
+                        const parts = cleaned.split('.')
+                        let formatted = parts[0] || ''
+                        if (parts.length > 1) {
+                          formatted +=
+                            '.' + parts.slice(1).join('').substring(0, 2)
+                        }
+                        const value = formatted ? parseFloat(formatted) : 0
                         setFormData({ ...formData, larguraCm: value })
                       }}
-                      keyboardType="numeric"
+                      keyboardType="decimal-pad"
                     />
                   </View>
                   <View className="flex-1">
@@ -772,18 +823,25 @@ export default function NewProductScreen() {
                     </Text>
                     <TextInput
                       className="bg-inputbg border border-gray-200 rounded-xl px-4 py-3 text-base"
-                      placeholder="0"
+                      placeholder="0.00"
                       value={
                         formData.profundidadeCm > 0
                           ? formData.profundidadeCm.toString()
                           : ''
                       }
                       onChangeText={(text) => {
-                        const value =
-                          parseInt(text.replace(/[^0-9]/g, '')) || 0
+                        // Permite números e ponto decimal, mas apenas um ponto
+                        const cleaned = text.replace(/[^0-9.]/g, '')
+                        const parts = cleaned.split('.')
+                        let formatted = parts[0] || ''
+                        if (parts.length > 1) {
+                          formatted +=
+                            '.' + parts.slice(1).join('').substring(0, 2)
+                        }
+                        const value = formatted ? parseFloat(formatted) : 0
                         setFormData({ ...formData, profundidadeCm: value })
                       }}
-                      keyboardType="numeric"
+                      keyboardType="decimal-pad"
                     />
                   </View>
                 </View>
@@ -885,16 +943,16 @@ export default function NewProductScreen() {
                     </Text>
                     <View className="mt-2">
                       <Text className="text-system-text text-sm">
-                        • <Text className="font-semibold">Cores:</Text> Vermelho,
-                        Azul, Preto
+                        • <Text className="font-semibold">Cores:</Text>{' '}
+                        Vermelho, Azul, Preto
                       </Text>
                       <Text className="text-system-text text-sm">
                         • <Text className="font-semibold">Tamanhos:</Text> P, M,
                         G, GG
                       </Text>
                       <Text className="text-system-text text-sm">
-                        • <Text className="font-semibold">Modelos:</Text> Básico,
-                        Premium, Deluxe
+                        • <Text className="font-semibold">Modelos:</Text>{' '}
+                        Básico, Premium, Deluxe
                       </Text>
                     </View>
                     <Text className="text-system-text text-xs mt-2 italic">
@@ -957,7 +1015,11 @@ export default function NewProductScreen() {
                           className="bg-red-50 rounded-full p-2 ml-2"
                           onPress={() => removeVariacao(index)}
                         >
-                          <Ionicons name="trash-outline" size={18} color="#EF4058" />
+                          <Ionicons
+                            name="trash-outline"
+                            size={18}
+                            color="#EF4058"
+                          />
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -1140,4 +1202,3 @@ export default function NewProductScreen() {
     </SafeAreaView>
   )
 }
-

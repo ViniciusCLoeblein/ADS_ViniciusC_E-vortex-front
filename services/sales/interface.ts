@@ -294,3 +294,29 @@ export interface ListaAvaliacoesRes {
   avaliacoes: AvaliacaoRes[]
   total: number
 }
+
+// Cupom
+export interface CupomRes {
+  id: string
+  codigo: string
+  descricao: string
+  tipo: string
+  valor: string
+  valorMinimo: string
+  usosMaximos: number
+  usosAtuais: number
+  usuarioId: string
+  dataInicio: Date
+  dataExpiracao: Date
+  ativo: boolean
+  criadoEm: Date
+  atualizadoEm: Date
+}
+
+// Vendas do Vendedor
+export interface TotalVendasVendedorRes {
+  vendedorId: string
+  nomeFantasia: string
+  totalVendas: string
+  totalPedidos: number
+}

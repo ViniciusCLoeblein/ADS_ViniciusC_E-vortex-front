@@ -9,7 +9,6 @@ import Toast from 'react-native-toast-message'
 import { useFonts } from 'expo-font'
 import * as Notifications from 'expo-notifications'
 import { SystemBars } from 'react-native-edge-to-edge'
-import Constants from 'expo-constants'
 import { CartProvider } from '@/contexts/CartContext'
 import { MannequinProvider } from '@/contexts/MannequinContext'
 
@@ -20,18 +19,16 @@ SplashScreen.setOptions({
   fade: true,
 })
 
-if (Constants.executionEnvironment !== 'storeClient') {
-  Notifications.setNotificationHandler({
-    handleNotification: async () => {
-      return {
-        shouldPlaySound: true,
-        shouldSetBadge: true,
-        shouldShowBanner: true,
-        shouldShowList: true,
-      }
-    },
-  })
-}
+Notifications.setNotificationHandler({
+  handleNotification: async () => {
+    return {
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    }
+  },
+})
 
 export default function RootLayout() {
   const queryClient = new QueryClient({

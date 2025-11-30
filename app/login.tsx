@@ -28,11 +28,24 @@ export default function LoginScreen() {
 
   const { mutate: mutateLogin, isPending } = useMutation({
     mutationFn: login,
-    onSuccess: (res) => {
+    onSuccess: async (res) => {
+      // Limpa o perfil primeiro
       clearProfile()
+      
+      // Limpa todas as queries
       queryClient.clear()
+      
+      // Configura a autenticação (isso também configura o header do axios)
       setAuth(res)
+      
+      // Aguarda um pequeno delay para garantir que o token seja configurado
+      // antes de invalidar as queries
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      
+      // Invalida todas as queries para forçar o refetch com o novo token
       queryClient.invalidateQueries()
+      
+      // Navega para a home
       router.replace('/home')
     },
     onError: () => {

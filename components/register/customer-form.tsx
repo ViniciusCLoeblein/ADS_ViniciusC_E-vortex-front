@@ -13,6 +13,7 @@ import {
   formatCPF,
   formatPhone,
   formatDate,
+  convertDateToISO,
   validateCustomerForm,
   type CustomerFormData,
 } from '@/lib/utils'
@@ -67,18 +68,24 @@ export default function CustomerForm({ onSuccess }: CustomerFormProps) {
 
   const handleRegister = async () => {
     if (handleValidation()) {
-      const payload: RegisterCustomerReq = {
-        nome: form.name,
-        email: form.email,
-        senha: form.password,
-        cpf: form.cpf.replace(/\D/g, ''),
-        tipo: 'cliente',
-        telefone: form.phone.replace(/\D/g, ''),
-        dataNascimento: form.birthDate.replace(/\D/g, ''),
-        aceitaMarketing: form.acceptMarketing,
-      }
+      try {
+        const payload: RegisterCustomerReq = {
+          nome: form.name,
+          email: form.email,
+          senha: form.password,
+          cpf: form.cpf.replace(/\D/g, ''),
+          tipo: 'cliente',
+          telefone: form.phone.replace(/\D/g, ''),
+          dataNascimento: convertDateToISO(form.birthDate),
+          aceitaMarketing: form.acceptMarketing,
+        }
 
-      registerCustomerMutation.mutate(payload)
+        registerCustomerMutation.mutate(payload)
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : 'Erro ao formatar data de nascimento'
+        Alert.alert('Erro', errorMessage)
+      }
     }
   }
 

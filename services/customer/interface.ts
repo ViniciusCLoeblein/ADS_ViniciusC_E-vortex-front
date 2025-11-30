@@ -7,6 +7,7 @@ export interface CustomerProfileRes {
   tipo: string
   telefone: string
   emailVerificado: boolean
+  pushToken: string
 }
 
 export interface EnderecoRes {

@@ -262,6 +262,13 @@ export const CartProvider = ({ children }: CartProviderProps) => {
 
   const clearCart = useCallback(async () => {
     setItems([])
+    
+    // Limpa o AsyncStorage explicitamente
+    try {
+      await AsyncStorage.removeItem(CART_STORAGE_KEY)
+    } catch (error) {
+      console.error('Erro ao limpar carrinho do AsyncStorage:', error)
+    }
 
     if (accessToken) {
       clearCartMutation.mutate()

@@ -56,3 +56,8 @@ export async function resetPassword(
   const response = await axios.post('/auth/reset-password', payload)
   return response.data
 }
+
+export async function updateToken(token: string): Promise<{ message: string }> {
+  const response = await axios.post('/auth/push-token', { token })
+  return response.data
+}

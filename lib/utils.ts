@@ -41,6 +41,34 @@ export const formatDate = (value: string): string => {
 }
 
 /**
+ * Converte data de DD/MM/AAAA para formato ISO 8601 (AAAA-MM-DD)
+ * @param date Data no formato DD/MM/AAAA ou DDMMAAAA
+ * @returns Data no formato ISO 8601 (AAAA-MM-DD)
+ */
+export const convertDateToISO = (date: string): string => {
+  const cleanDate = date.replace(/\D/g, '')
+  if (cleanDate.length !== 8) {
+    throw new Error('Data deve ter 8 dígitos no formato DDMMAAAA')
+  }
+
+  const day = cleanDate.substring(0, 2)
+  const month = cleanDate.substring(2, 4)
+  const year = cleanDate.substring(4, 8)
+
+  // Validação básica
+  const dayNum = parseInt(day, 10)
+  const monthNum = parseInt(month, 10)
+  const yearNum = parseInt(year, 10)
+
+  if (dayNum < 1 || dayNum > 31 || monthNum < 1 || monthNum > 12 || yearNum < 1900) {
+    throw new Error('Data inválida')
+  }
+
+  // Retorna no formato ISO 8601: AAAA-MM-DD
+  return `${year}-${month}-${day}`
+}
+
+/**
  * Formata CEP no padrão XXXXX-XXX
  */
 export const formatCEP = (value: string): string => {

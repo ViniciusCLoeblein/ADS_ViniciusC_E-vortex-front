@@ -8,6 +8,7 @@ import {
   Alert,
   RefreshControl,
   ActivityIndicator,
+  TextInput,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
@@ -18,6 +19,7 @@ import {
   limparCarrinho,
   listarImagensProduto,
   obterVendedorUsuario,
+  buscarCupomPorCodigo,
 } from '@/services/sales'
 import {
   listarEnderecos,
@@ -27,6 +29,7 @@ import {
 import { EnderecoRes } from '@/services/customer/interface'
 import { calcularFrete } from '@/lib/utils'
 import { useAuthStore } from '@/stores/auth'
+import { useCart } from '@/contexts/CartContext'
 
 interface ProductImageProps {
   readonly produtoId: string
@@ -88,11 +91,21 @@ function ProductImage({
 export default function CheckoutScreen() {
   const queryClient = useQueryClient()
   const { userId } = useAuthStore()
+  const { clearCart } = useCart()
   const [isProcessing, setIsProcessing] = useState(false)
   const [selectedEndereco, setSelectedEndereco] = useState<string | null>(null)
   const [selectedCartao, setSelectedCartao] = useState<string | null>(null)
   const [valorFrete, setValorFrete] = useState<number>(0)
   const [isCalculandoFrete, setIsCalculandoFrete] = useState(false)
+  const [codigoCupom, setCodigoCupom] = useState('')
+  const [cupomAplicado, setCupomAplicado] = useState<{
+    id: string
+    codigo: string
+    tipo: string
+    valor: string
+    valorMinimo: string
+  } | null>(null)
+  const [isValidandoCupom, setIsValidandoCupom] = useState(false)
 
   const {
     data: carrinho,
@@ -116,17 +129,21 @@ export default function CheckoutScreen() {
     enabled: !!userId,
   })
 
-  const clearCartMutation = useMutation({
-    mutationFn: limparCarrinho,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['carrinho', userId] })
-    },
-  })
-
   const criarPedidoMutation = useMutation({
     mutationFn: criarPedido,
-    onSuccess: (pedido) => {
-      clearCartMutation.mutate()
+    onSuccess: async (pedido) => {
+      // Limpa o carrinho no contexto (que também limpa o AsyncStorage)
+      await clearCart()
+      
+      // Limpa o carrinho no backend
+      try {
+        await limparCarrinho()
+      } catch (error) {
+        console.error('Erro ao limpar carrinho no backend:', error)
+      }
+      
+      // Invalida todas as queries do carrinho
+      queryClient.invalidateQueries({ queryKey: ['carrinho'] })
 
       router.replace({
         pathname: '/order-success',
@@ -245,6 +262,105 @@ export default function CheckoutScreen() {
       style: 'currency',
       currency: 'BRL',
     }).format(price)
+  }
+
+  const calcularDesconto = (): number => {
+    if (!cupomAplicado || !carrinho) return 0
+
+    const subtotal = carrinho.total
+    const valorMinimo = Number.parseFloat(cupomAplicado.valorMinimo)
+
+    // Verifica se o subtotal atende ao valor mínimo
+    if (subtotal < valorMinimo) {
+      return 0
+    }
+
+    const valorCupom = Number.parseFloat(cupomAplicado.valor)
+
+    if (cupomAplicado.tipo === 'percentual') {
+      // Desconto percentual
+      const desconto = (subtotal * valorCupom) / 100
+      return Math.min(desconto, subtotal) // Não pode ser maior que o subtotal
+    } else {
+      // Desconto em valor fixo
+      return Math.min(valorCupom, subtotal) // Não pode ser maior que o subtotal
+    }
+  }
+
+  const handleValidarCupom = async () => {
+    if (!codigoCupom.trim()) {
+      Alert.alert('Aviso', 'Digite um código de cupom')
+      return
+    }
+
+    setIsValidandoCupom(true)
+    try {
+      const cupom = await buscarCupomPorCodigo(codigoCupom.trim().toUpperCase())
+
+      // Validações do cupom
+      if (!cupom.ativo) {
+        Alert.alert('Cupom Inválido', 'Este cupom não está ativo')
+        setCodigoCupom('')
+        setCupomAplicado(null)
+        return
+      }
+
+      const agora = new Date()
+      const dataInicio = new Date(cupom.dataInicio)
+      const dataExpiracao = new Date(cupom.dataExpiracao)
+
+      if (agora < dataInicio) {
+        Alert.alert('Cupom Inválido', 'Este cupom ainda não está válido')
+        setCodigoCupom('')
+        setCupomAplicado(null)
+        return
+      }
+
+      if (agora > dataExpiracao) {
+        Alert.alert('Cupom Inválido', 'Este cupom está expirado')
+        setCodigoCupom('')
+        setCupomAplicado(null)
+        return
+      }
+
+      if (cupom.usosAtuais >= cupom.usosMaximos) {
+        Alert.alert('Cupom Inválido', 'Este cupom atingiu o limite de usos')
+        setCodigoCupom('')
+        setCupomAplicado(null)
+        return
+      }
+
+      if (carrinho && carrinho.total < Number.parseFloat(cupom.valorMinimo)) {
+        Alert.alert(
+          'Cupom Inválido',
+          `O valor mínimo para usar este cupom é ${formatPrice(Number.parseFloat(cupom.valorMinimo))}`,
+        )
+        setCodigoCupom('')
+        setCupomAplicado(null)
+        return
+      }
+
+      // Cupom válido
+      setCupomAplicado({
+        id: cupom.id,
+        codigo: cupom.codigo,
+        tipo: cupom.tipo,
+        valor: cupom.valor,
+        valorMinimo: cupom.valorMinimo,
+      })
+      Alert.alert('Sucesso', 'Cupom aplicado com sucesso!')
+    } catch (error) {
+      Alert.alert('Cupom Inválido', 'Cupom não encontrado ou inválido')
+      setCodigoCupom('')
+      setCupomAplicado(null)
+    } finally {
+      setIsValidandoCupom(false)
+    }
+  }
+
+  const handleRemoverCupom = () => {
+    setCupomAplicado(null)
+    setCodigoCupom('')
   }
 
   const formatEndereco = (endereco: EnderecoRes) => {
@@ -453,7 +569,7 @@ export default function CheckoutScreen() {
         cartaoCreditoId: selectedCartao,
         metodoPagamento: 'cartao',
         frete: valorFrete,
-        desconto: 0,
+        desconto: calcularDesconto(),
         itens,
       })
     } catch (error) {
@@ -593,6 +709,60 @@ export default function CheckoutScreen() {
             {renderCartoes()}
           </View>
 
+          <View className="mb-6">
+            <Text className="text-frg900 font-bold text-lg mb-4">
+              Cupom de Desconto
+            </Text>
+            <View className="bg-white rounded-2xl p-4 border border-gray-200">
+              {cupomAplicado ? (
+                <View className="flex-row items-center justify-between">
+                  <View className="flex-1">
+                    <Text className="text-frg900 font-semibold text-base mb-1">
+                      {cupomAplicado.codigo}
+                    </Text>
+                    <Text className="text-green-600 text-sm">
+                      Desconto aplicado:{' '}
+                      {cupomAplicado.tipo === 'percentual'
+                        ? `${cupomAplicado.valor}%`
+                        : formatPrice(Number.parseFloat(cupomAplicado.valor))}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={handleRemoverCupom}
+                    className="ml-4"
+                  >
+                    <Ionicons name="close-circle" size={24} color="#EF4058" />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View className="flex-row gap-2">
+                  <TextInput
+                    className="flex-1 bg-inputbg border border-gray-200 rounded-xl px-4 py-3 text-base"
+                    placeholder="Digite o código do cupom"
+                    placeholderTextColor="#9FABB9"
+                    value={codigoCupom}
+                    onChangeText={setCodigoCupom}
+                    autoCapitalize="characters"
+                    editable={!isValidandoCupom}
+                  />
+                  <TouchableOpacity
+                    className={`bg-frgprimary rounded-xl px-6 py-3 ${
+                      isValidandoCupom ? 'opacity-50' : ''
+                    }`}
+                    onPress={handleValidarCupom}
+                    disabled={isValidandoCupom || !codigoCupom.trim()}
+                  >
+                    {isValidandoCupom ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <Text className="text-white font-semibold">Aplicar</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          </View>
+
           <View className="bg-white rounded-2xl p-6 mb-6 shadow-sm border border-gray-100">
             <Text className="text-frg900 font-bold text-lg mb-4">
               Resumo do Pedido
@@ -621,11 +791,22 @@ export default function CheckoutScreen() {
               </Text>
             </View>
 
+            {calcularDesconto() > 0 && (
+              <View className="flex-row justify-between mb-2">
+                <Text className="text-system-text">Desconto:</Text>
+                <Text className="text-green-600 font-semibold">
+                  - {formatPrice(calcularDesconto())}
+                </Text>
+              </View>
+            )}
+
             <View className="border-t border-gray-200 pt-3 mt-3">
               <View className="flex-row justify-between">
                 <Text className="text-frg900 font-bold text-lg">Total:</Text>
                 <Text className="text-frgprimary font-bold text-xl">
-                  {formatPrice(carrinho.total + valorFrete)}
+                  {formatPrice(
+                    carrinho.total + valorFrete - calcularDesconto(),
+                  )}
                 </Text>
               </View>
             </View>
@@ -648,13 +829,25 @@ export default function CheckoutScreen() {
           </View>
           <View className="flex-row items-center justify-between mb-2">
             <Text className="text-system-text">Frete:</Text>
-            <Text className="text-frg900 font-semibold">R$ 0,00</Text>
+            <Text className="text-frg900 font-semibold">
+              {formatPrice(valorFrete)}
+            </Text>
           </View>
+          {calcularDesconto() > 0 && (
+            <View className="flex-row items-center justify-between mb-2">
+              <Text className="text-system-text">Desconto:</Text>
+              <Text className="text-green-600 font-semibold">
+                - {formatPrice(calcularDesconto())}
+              </Text>
+            </View>
+          )}
           <View className="border-t border-gray-200 mt-3 pt-3">
             <View className="flex-row items-center justify-between">
               <Text className="text-frg900 font-bold text-lg">Total:</Text>
               <Text className="text-frgprimary font-bold text-xl">
-                {formatPrice(carrinho.total)}
+                {formatPrice(
+                  carrinho.total + valorFrete - calcularDesconto(),
+                )}
               </Text>
             </View>
           </View>

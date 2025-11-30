@@ -30,10 +30,12 @@ export default function RegisterScreen() {
 
   const loginMutation = useMutation({
     mutationFn: login,
-    onSuccess: (res) => {
+    onSuccess: async (res) => {
       clearProfile()
+
       queryClient.clear()
       setAuth(res)
+      await new Promise((resolve) => setTimeout(resolve, 100))
       queryClient.invalidateQueries()
       router.replace('/home')
     },

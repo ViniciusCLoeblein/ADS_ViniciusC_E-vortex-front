@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
-import { router } from 'expo-router'
+import { router, useFocusEffect } from 'expo-router'
 import PagerView from 'react-native-pager-view'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import Toast from 'react-native-toast-message'
@@ -30,10 +30,13 @@ import {
   listarVariacoesProduto,
   obterVendedorUsuario,
   listarAvaliacoesProduto,
+  getTotalVendasVendedor,
 } from '@/services/sales'
 import type { CategoriaRes, ProdutoRes } from '@/services/sales/interface'
 import { useBackHandler } from '@/hooks/indext'
 import { useCart } from '@/contexts/CartContext'
+import { registerForPushNotificationsAsync } from '@/notifications'
+import { updateToken } from '@/services/auth'
 
 interface ProductImageProps {
   readonly produtoId: string
@@ -119,6 +122,20 @@ function SellerProductsDashboard() {
     queryKey: ['enderecos', userId],
     queryFn: listarEnderecos,
     enabled: !!userId,
+  })
+
+  // Busca o vendedor para obter o vendedorId
+  const { data: vendedorData } = useQuery({
+    queryKey: ['vendedor-usuario', userId],
+    queryFn: () => obterVendedorUsuario(userId!),
+    enabled: !!userId,
+  })
+
+  // Busca o total de vendas do vendedor
+  const { data: vendasData, isLoading: isLoadingVendas } = useQuery({
+    queryKey: ['vendas-vendedor', vendedorData?.id],
+    queryFn: () => getTotalVendasVendedor(vendedorData!.id),
+    enabled: !!vendedorData?.id,
   })
 
   const hasStoreLocation =
@@ -252,6 +269,50 @@ function SellerProductsDashboard() {
                 </Text>
               </View>
               <Text className="text-system-text text-sm">Valor em Estoque</Text>
+            </View>
+          </View>
+
+          {/* Card de Total de Vendas */}
+          <View className="w-1/2 px-2 mb-4">
+            <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+              <View className="flex-row items-center mb-2">
+                <View className="bg-emerald-100 rounded-full p-2 mr-2">
+                  <Ionicons
+                    name="trending-up-outline"
+                    size={20}
+                    color="#10B981"
+                  />
+                </View>
+                {isLoadingVendas ? (
+                  <ActivityIndicator size="small" color="#437C99" />
+                ) : (
+                  <Text className="text-frg900 font-bold text-base flex-1">
+                    {vendasData
+                      ? formatLargePrice(vendasData.totalVendas)
+                      : formatPrice(0)}
+                  </Text>
+                )}
+              </View>
+              <Text className="text-system-text text-sm">Total de Vendas</Text>
+            </View>
+          </View>
+
+          {/* Card de Total de Pedidos */}
+          <View className="w-1/2 px-2 mb-4">
+            <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+              <View className="flex-row items-center mb-2">
+                <View className="bg-orange-100 rounded-full p-2 mr-2">
+                  <Ionicons name="receipt-outline" size={20} color="#F97316" />
+                </View>
+                {isLoadingVendas ? (
+                  <ActivityIndicator size="small" color="#437C99" />
+                ) : (
+                  <Text className="text-frg900 font-bold text-2xl">
+                    {vendasData?.totalPedidos || 0}
+                  </Text>
+                )}
+              </View>
+              <Text className="text-system-text text-sm">Total de Pedidos</Text>
             </View>
           </View>
         </View>
@@ -438,6 +499,7 @@ export default function HomeScreen() {
   const [selectedVariacaoId, setSelectedVariacaoId] = useState<string | null>(
     null,
   )
+  const [pushToken, setPushToken] = useState('')
   const pagerRef = useRef<PagerView>(null)
   const queryClient = useQueryClient()
   const { setProfile, profile } = useCustomerStore()
@@ -534,6 +596,27 @@ export default function HomeScreen() {
     },
   })
 
+  const updateTokenMutation = useMutation({
+    mutationFn: updateToken,
+  })
+
+  const updateTokenFn = useCallback(() => {
+    if (userId && profile && !profile?.pushToken && !pushToken) {
+      registerForPushNotificationsAsync(setPushToken, (token) => {
+        if (token) {
+          updateTokenMutation.mutate(token)
+          setProfile({ ...profile, pushToken: token })
+        }
+      })
+    }
+  }, [pushToken, updateTokenMutation, userId, profile, setProfile])
+
+  useFocusEffect(
+    useCallback(() => {
+      updateTokenFn()
+    }, [updateTokenFn]),
+  )
+
   useEffect(() => {
     if (customerProfile) setProfile(customerProfile)
   }, [customerProfile, setProfile])
@@ -559,7 +642,7 @@ export default function HomeScreen() {
 
   const getWelcomeMessage = () => {
     if (isLoadingProfile && !isVendedor) return 'Carregando...'
-    if (profile) return `Bem-vindo, ${profile.nome}!`
+    if (profile) return `Bem-vindo, ${profile.nome?.trimEnd()}!`
     return 'Bem-vindo de volta!'
   }
 
@@ -645,6 +728,8 @@ export default function HomeScreen() {
     }
     return false
   })
+
+  console.log(produtoDetalhe)
 
   const renderProduct = ({ item }: { item: ProdutoRes }) => {
     const isFavorite = favoritosIds.has(item.id)

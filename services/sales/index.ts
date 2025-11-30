@@ -25,6 +25,8 @@ import {
   CriarAvaliacaoReq,
   AvaliacaoCriadaRes,
   ListaAvaliacoesRes,
+  CupomRes,
+  TotalVendasVendedorRes,
 } from './interface'
 
 export async function obterCarrinho(): Promise<CarrinhoRes> {
@@ -258,6 +260,20 @@ export async function listarAvaliacoesProduto(
 ): Promise<ListaAvaliacoesRes> {
   const response = await axios.get<ListaAvaliacoesRes>(
     `/sales/produtos/${produtoId}/avaliacoes`,
+  )
+  return response.data
+}
+
+export async function buscarCupomPorCodigo(codigo: string): Promise<CupomRes> {
+  const response = await axios.get<CupomRes>(`/sales/cupons/codigo/${codigo}`)
+  return response.data
+}
+
+export async function getTotalVendasVendedor(
+  vendedorId: string,
+): Promise<TotalVendasVendedorRes> {
+  const response = await axios.get<TotalVendasVendedorRes>(
+    `/sales/vendedores/${vendedorId}/vendas`,
   )
   return response.data
 }

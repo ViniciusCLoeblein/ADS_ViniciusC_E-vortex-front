@@ -2,21 +2,17 @@ import { View, Text, ScrollView, TouchableOpacity } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { router } from 'expo-router'
-import { useQueryClient } from '@tanstack/react-query'
 import { useCustomerStore } from '@/stores/customer'
 import { useAuthStore } from '@/stores/auth'
 import { maskCPF, maskPhone } from '@/constants/masks'
 
 export default function ProfileScreen() {
-  const queryClient = useQueryClient()
   const { profile } = useCustomerStore()
   const { clearAuth } = useAuthStore()
   const { clearProfile } = useCustomerStore()
 
   const handleLogout = () => {
     clearAuth()
-    queryClient.cancelQueries()
-    queryClient.resetQueries()
     clearProfile()
     router.replace('/login')
   }
@@ -60,7 +56,10 @@ export default function ProfileScreen() {
                   </Text>
                 </View>
 
-                <InfoRow label="CPF" value={maskCPF(profile.cpf)} />
+                {profile.tipo !== 'vendedor' && (
+                  <InfoRow label="CPF" value={maskCPF(profile.cpf)} />
+                )}
+
                 <InfoRow
                   label="Status do Email"
                   value={

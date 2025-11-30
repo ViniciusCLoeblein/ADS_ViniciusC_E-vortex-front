@@ -20,6 +20,7 @@ import {
 } from '@/services/sales'
 import { useCart } from '@/contexts/CartContext'
 import type { ItemCarrinhoRes } from '@/services/sales/interface'
+import { useAuthStore } from '@/stores/auth'
 
 interface CartItemProps {
   readonly item: ItemCarrinhoRes
@@ -42,10 +43,11 @@ function CartItem({
   removeItemMutation,
   formatPrice,
 }: CartItemProps) {
+  const { userId } = useAuthStore()
   const { data: imagensData, isLoading: isLoadingImage } = useQuery({
-    queryKey: ['imagens-produto', item.produtoId],
+    queryKey: ['imagens-produto', userId, item.produtoId],
     queryFn: () => listarImagensProduto(item.produtoId),
-    enabled: !!item.produtoId,
+    enabled: !!item.produtoId && !!userId,
   })
 
   const imagemPrincipal =
@@ -149,13 +151,14 @@ function CartItem({
 
 export default function CartScreen() {
   const queryClient = useQueryClient()
+  const { userId } = useAuthStore()
   const { items, isLoading, removeFromCart, clearCart, syncCart } = useCart()
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({})
 
   const removeItemMutation = useMutation({
     mutationFn: removerItemCarrinho,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['carrinho'] })
+      queryClient.invalidateQueries({ queryKey: ['carrinho', userId] })
       syncCart()
     },
   })
@@ -163,7 +166,7 @@ export default function CartScreen() {
   const clearCartMutation = useMutation({
     mutationFn: limparCarrinho,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['carrinho'] })
+      queryClient.invalidateQueries({ queryKey: ['carrinho', userId] })
       clearCart()
       Alert.alert('Sucesso', 'Carrinho limpo com sucesso!')
     },

@@ -26,6 +26,7 @@ import {
 } from '@/services/customer'
 import { EnderecoRes } from '@/services/customer/interface'
 import { calcularFrete } from '@/lib/utils'
+import { useAuthStore } from '@/stores/auth'
 
 interface ProductImageProps {
   readonly produtoId: string
@@ -41,11 +42,12 @@ function ProductImage({
   alt = 'Produto',
 }: ProductImageProps) {
   const [imageError, setImageError] = useState(false)
+  const { userId } = useAuthStore()
 
   const { data: imagensData, isLoading } = useQuery({
-    queryKey: ['imagens-produto', produtoId],
+    queryKey: ['imagens-produto', userId, produtoId],
     queryFn: () => listarImagensProduto(produtoId),
-    enabled: !!produtoId,
+    enabled: !!produtoId && !!userId,
   })
 
   const imagemPrincipal =
@@ -85,6 +87,7 @@ function ProductImage({
 
 export default function CheckoutScreen() {
   const queryClient = useQueryClient()
+  const { userId } = useAuthStore()
   const [isProcessing, setIsProcessing] = useState(false)
   const [selectedEndereco, setSelectedEndereco] = useState<string | null>(null)
   const [selectedCartao, setSelectedCartao] = useState<string | null>(null)
@@ -96,24 +99,27 @@ export default function CheckoutScreen() {
     isLoading,
     refetch,
   } = useQuery({
-    queryKey: ['carrinho'],
+    queryKey: ['carrinho', userId],
     queryFn: obterCarrinho,
+    enabled: !!userId,
   })
 
   const { data: enderecosData, isLoading: isLoadingEnderecos } = useQuery({
-    queryKey: ['enderecos'],
+    queryKey: ['enderecos', userId],
     queryFn: listarEnderecos,
+    enabled: !!userId,
   })
 
   const { data: cartoesData, isLoading: isLoadingCartoes } = useQuery({
-    queryKey: ['cartoes'],
+    queryKey: ['cartoes', userId],
     queryFn: listarCartoes,
+    enabled: !!userId,
   })
 
   const clearCartMutation = useMutation({
     mutationFn: limparCarrinho,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['carrinho'] })
+      queryClient.invalidateQueries({ queryKey: ['carrinho', userId] })
     },
   })
 

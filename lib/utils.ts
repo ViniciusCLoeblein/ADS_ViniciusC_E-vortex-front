@@ -135,7 +135,6 @@ export interface SellerFormData {
   phone: string
   password: string
   confirmPassword: string
-  cpf: string
   cnpj: string
   companyName: string
   tradeName: string
@@ -220,7 +219,6 @@ export const validateSellerForm = (
   if (!formData.name.trim()) errors.push('Nome é obrigatório')
   if (!formData.email.trim()) errors.push('Email é obrigatório')
   if (!formData.phone.trim()) errors.push('Telefone é obrigatório')
-  if (!formData.cpf.trim()) errors.push('CPF é obrigatório')
   if (!formData.password) errors.push('Senha é obrigatória')
   if (!formData.confirmPassword) {
     errors.push('Confirmação de senha é obrigatória')
@@ -239,10 +237,6 @@ export const validateSellerForm = (
   // Validações de formato
   if (formData.email && !isValidEmail(formData.email)) {
     errors.push('Email deve ter formato válido')
-  }
-
-  if (formData.cpf && !isValidCPFFormat(formData.cpf)) {
-    errors.push('CPF deve ter 11 dígitos')
   }
 
   if (formData.cnpj && !isValidCNPJFormat(formData.cnpj)) {

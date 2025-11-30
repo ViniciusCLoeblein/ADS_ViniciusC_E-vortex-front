@@ -26,6 +26,7 @@ import type {
   CriarProdutoReq,
   CriarVariacaoReq,
 } from '@/services/sales/interface'
+import { useAuthStore } from '@/stores/auth'
 
 // Função para formatar dinheiro durante a digitação
 const formatMoneyInput = (value: string): string => {
@@ -84,6 +85,7 @@ const generateSKUSuggestion = (nome: string): string => {
 
 export default function NewProductScreen() {
   const queryClient = useQueryClient()
+  const { userId } = useAuthStore()
   const [formData, setFormData] = useState<CriarProdutoReq>({
     categoriaId: '',
     sku: '',
@@ -128,13 +130,15 @@ export default function NewProductScreen() {
     useState('')
 
   const { data: categorias } = useQuery({
-    queryKey: ['categorias'],
+    queryKey: ['categorias', userId],
     queryFn: listarCategorias,
+    enabled: !!userId,
   })
 
   const { data: enderecosData, isLoading: isLoadingEnderecos } = useQuery({
-    queryKey: ['enderecos'],
+    queryKey: ['enderecos', userId],
     queryFn: listarEnderecos,
+    enabled: !!userId,
   })
 
   const hasStoreLocation =
@@ -171,7 +175,7 @@ export default function NewProductScreen() {
   const createVariacaoMutation = useMutation({
     mutationFn: criarVariacao,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['variacoes'] })
+      queryClient.invalidateQueries({ queryKey: ['variacoes', userId] })
     },
   })
 
@@ -221,7 +225,7 @@ export default function NewProductScreen() {
         await Promise.all(variacaoPromises)
       }
 
-      queryClient.invalidateQueries({ queryKey: ['produtos'] })
+      queryClient.invalidateQueries({ queryKey: ['produtos', 'vendedor', userId] })
       Alert.alert('Sucesso', 'Produto criado com sucesso!', [
         {
           text: 'OK',
@@ -237,7 +241,7 @@ export default function NewProductScreen() {
   const uploadImageMutation = useMutation({
     mutationFn: uploadImagem,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['imagens'] })
+      queryClient.invalidateQueries({ queryKey: ['imagens', userId] })
     },
   })
 

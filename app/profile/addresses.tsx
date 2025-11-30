@@ -28,9 +28,11 @@ import type {
 import { maskCEP } from '@/constants/masks'
 import { buscarCep } from '@/services/brasilapi'
 import { useBackHandler } from '@/hooks/indext'
+import { useAuthStore } from '@/stores/auth'
 
 export default function AddressesScreen() {
   const queryClient = useQueryClient()
+  const { userId } = useAuthStore()
   const pagerRef = useRef<PagerView>(null)
   const [currentPage, setCurrentPage] = useState(0)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -77,14 +79,15 @@ export default function AddressesScreen() {
   }
 
   const { data, isLoading } = useQuery({
-    queryKey: ['enderecos'],
+    queryKey: ['enderecos', userId],
     queryFn: listarEnderecos,
+    enabled: !!userId,
   })
 
   const { data: enderecoEdit, isLoading: isLoadingEdit } = useQuery({
-    queryKey: ['endereco', editingId],
+    queryKey: ['endereco', userId, editingId],
     queryFn: () => obterEndereco(editingId!),
-    enabled: !!editingId,
+    enabled: !!editingId && !!userId,
   })
 
   useEffect(() => {
@@ -107,7 +110,7 @@ export default function AddressesScreen() {
   const deleteMutation = useMutation({
     mutationFn: excluirEndereco,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['enderecos'] })
+      queryClient.invalidateQueries({ queryKey: ['enderecos', userId] })
       Alert.alert('Sucesso', 'Endereço excluído com sucesso!')
     },
     onError: () => {
@@ -119,8 +122,8 @@ export default function AddressesScreen() {
     mutationFn: (data: AtualizarEnderecoReq) =>
       atualizarEndereco(editingId!, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['enderecos'] })
-      queryClient.invalidateQueries({ queryKey: ['endereco', editingId] })
+      queryClient.invalidateQueries({ queryKey: ['enderecos', userId] })
+      queryClient.invalidateQueries({ queryKey: ['endereco', userId, editingId] })
       Alert.alert('Sucesso', 'Endereço atualizado com sucesso!')
       handleBackToList()
     },

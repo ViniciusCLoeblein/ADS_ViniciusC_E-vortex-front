@@ -22,6 +22,9 @@ import {
   CriarImagemReq,
   ImagemUploadRes,
   VendedorPublicoRes,
+  CriarAvaliacaoReq,
+  AvaliacaoCriadaRes,
+  ListaAvaliacoesRes,
 } from './interface'
 
 export async function obterCarrinho(): Promise<CarrinhoRes> {
@@ -233,6 +236,28 @@ export async function obterVendedorUsuario(
 ): Promise<VendedorPublicoRes> {
   const response = await axios.get<VendedorPublicoRes>(
     `/sales/vendedores/usuario/${usuarioId}`,
+  )
+  return response.data
+}
+
+export async function criarAvaliacao(
+  data: CriarAvaliacaoReq,
+): Promise<AvaliacaoCriadaRes> {
+  const response = await axios.post<AvaliacaoCriadaRes>('/sales/avaliacoes', {
+    pedidoId: data.pedidoId,
+    produtoId: data.produtoId,
+    nota: data.nota,
+    titulo: data.titulo,
+    comentario: data.comentario,
+  })
+  return response.data
+}
+
+export async function listarAvaliacoesProduto(
+  produtoId: string,
+): Promise<ListaAvaliacoesRes> {
+  const response = await axios.get<ListaAvaliacoesRes>(
+    `/sales/produtos/${produtoId}/avaliacoes`,
   )
   return response.data
 }

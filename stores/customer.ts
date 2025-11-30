@@ -37,4 +37,3 @@ export const useCustomerStore = create<CustomerStoreProps>()(
     },
   ),
 )
-

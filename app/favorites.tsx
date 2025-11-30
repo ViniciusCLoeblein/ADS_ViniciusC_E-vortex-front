@@ -19,6 +19,7 @@ import {
   listarImagensProduto,
   removerTodosFavoritos,
 } from '@/services/sales'
+import { useAuthStore } from '@/stores/auth'
 
 interface ProductImageProps {
   readonly produtoId: string
@@ -78,16 +79,18 @@ function ProductImage({
 
 export default function FavoritesScreen() {
   const queryClient = useQueryClient()
+  const { userId } = useAuthStore()
 
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['favoritos'],
+    queryKey: ['favoritos', userId],
     queryFn: listarFavoritos,
+    enabled: !!userId,
   })
 
   const removeFavoriteMutation = useMutation({
     mutationFn: removerFavorito,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['favoritos'] })
+      queryClient.invalidateQueries({ queryKey: ['favoritos', userId] })
     },
     onError: () => {
       Alert.alert('Erro', 'Não foi possível remover dos favoritos.')
@@ -97,7 +100,7 @@ export default function FavoritesScreen() {
   const removeAllFavoritesMutation = useMutation({
     mutationFn: removerTodosFavoritos,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['favoritos'] })
+      queryClient.invalidateQueries({ queryKey: ['favoritos', userId] })
       Alert.alert('Sucesso', 'Todos os favoritos foram removidos!')
     },
     onError: () => {

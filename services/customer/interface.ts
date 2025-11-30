@@ -147,7 +147,13 @@ export interface ListaPedidosRes {
 }
 
 export interface AtualizarStatusPedidoReq {
-  status: 'pendente' | 'pago' | 'processando' | 'enviado' | 'entregue' | 'cancelado'
+  status:
+    | 'pendente'
+    | 'pago'
+    | 'processando'
+    | 'enviado'
+    | 'entregue'
+    | 'cancelado'
   codigoRastreamento?: string
   transportadora?: string
   previsaoEntrega?: string

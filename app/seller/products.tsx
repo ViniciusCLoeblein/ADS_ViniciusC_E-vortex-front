@@ -46,11 +46,12 @@ function ProductImage({
   alt = 'Produto',
 }: ProductImageProps) {
   const [imageError, setImageError] = useState(false)
+  const { userId } = useAuthStore()
 
   const { data: imagensData, isLoading } = useQuery({
-    queryKey: ['imagens-produto', produtoId],
+    queryKey: ['imagens-produto', userId, produtoId],
     queryFn: () => listarImagensProduto(produtoId),
-    enabled: !!produtoId,
+    enabled: !!produtoId && !!userId,
   })
 
   const imagemPrincipal =
@@ -89,8 +90,8 @@ function ProductImage({
 }
 
 export default function SellerProductsScreen() {
-  const { userId } = useAuthStore()
   const queryClient = useQueryClient()
+  const { userId: sellerUserId } = useAuthStore()
   const pagerRef = useRef<PagerView>(null)
   const [currentPage, setCurrentPage] = useState(0)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -107,43 +108,45 @@ export default function SellerProductsScreen() {
     Array<{ uri: string; id?: string }>
   >([])
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
-
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ['produtos', 'vendedor', userId],
+    queryKey: ['produtos', 'vendedor', sellerUserId],
     queryFn: () =>
       listarProdutos({
-        vendedorId: userId || undefined,
+        vendedorId: sellerUserId || undefined,
         pagina: 1,
         limite: 100,
       }),
+    enabled: !!sellerUserId,
   })
 
   const { data: produtoEdit, isLoading: isLoadingEdit } = useQuery({
-    queryKey: ['produto', editingId],
+    queryKey: ['produto', sellerUserId, editingId],
     queryFn: () => obterProduto(editingId!),
-    enabled: !!editingId,
+    enabled: !!editingId && !!sellerUserId,
   })
 
   const { data: categorias } = useQuery({
-    queryKey: ['categorias'],
+    queryKey: ['categorias', sellerUserId],
     queryFn: listarCategorias,
+    enabled: !!sellerUserId,
   })
 
   const { data: variacoes } = useQuery({
-    queryKey: ['variacoes', editingId],
+    queryKey: ['variacoes', sellerUserId, editingId],
     queryFn: () => listarVariacoesProduto(editingId!),
-    enabled: !!editingId,
+    enabled: !!editingId && !!sellerUserId,
   })
 
   const { data: imagens } = useQuery({
-    queryKey: ['imagens', editingId],
+    queryKey: ['imagens', sellerUserId, editingId],
     queryFn: () => listarImagensProduto(editingId!),
-    enabled: !!editingId,
+    enabled: !!editingId && !!sellerUserId,
   })
 
   const { data: enderecosData } = useQuery({
-    queryKey: ['enderecos'],
+    queryKey: ['enderecos', sellerUserId],
     queryFn: listarEnderecos,
+    enabled: !!sellerUserId,
   })
 
   const hasStoreLocation =

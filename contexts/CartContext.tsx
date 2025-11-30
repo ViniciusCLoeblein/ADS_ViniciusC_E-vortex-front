@@ -56,12 +56,12 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   const [items, setItems] = useState<ItemCarrinhoRes[]>([])
   const [isInitialized, setIsInitialized] = useState(false)
   const queryClient = useQueryClient()
-  const { accessToken } = useAuthStore()
+  const { accessToken, userId } = useAuthStore()
 
   const { data: carrinhoBackend, isLoading: isLoadingBackend } = useQuery({
-    queryKey: ['carrinho'],
+    queryKey: ['carrinho', userId],
     queryFn: obterCarrinho,
-    enabled: !!accessToken,
+    enabled: !!accessToken && !!userId,
     retry: 1,
   })
 

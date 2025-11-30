@@ -19,7 +19,6 @@ import Toast from 'react-native-toast-message'
 import { useAuthStore } from '@/stores/auth'
 import { useCustomerStore } from '@/stores/customer'
 import { getCustomerProfile, listarEnderecos } from '@/services/customer'
-import { getSellerProfile } from '@/services/seller'
 import {
   listarProdutos,
   listarCategorias,
@@ -30,6 +29,7 @@ import {
   listarImagensProduto,
   listarVariacoesProduto,
   obterVendedorUsuario,
+  listarAvaliacoesProduto,
 } from '@/services/sales'
 import type { CategoriaRes, ProdutoRes } from '@/services/sales/interface'
 import { useBackHandler } from '@/hooks/indext'
@@ -52,10 +52,11 @@ function ProductImage({
 }: ProductImageProps) {
   const [imageError, setImageError] = useState(false)
 
+  const { userId } = useAuthStore()
   const { data: imagensData, isLoading } = useQuery({
-    queryKey: ['imagens-produto', produtoId],
+    queryKey: ['imagens-produto', userId, produtoId],
     queryFn: () => listarImagensProduto(produtoId),
-    enabled: !!produtoId,
+    enabled: !!produtoId && !!userId,
   })
 
   const imagemPrincipal =
@@ -115,8 +116,9 @@ function SellerProductsDashboard() {
   })
 
   const { data: enderecosData } = useQuery({
-    queryKey: ['enderecos'],
+    queryKey: ['enderecos', userId],
     queryFn: listarEnderecos,
+    enabled: !!userId,
   })
 
   const hasStoreLocation =
@@ -130,6 +132,49 @@ function SellerProductsDashboard() {
       style: 'currency',
       currency: 'BRL',
     }).format(safe)
+  }
+
+  const formatLargeNumber = (num: number): string => {
+    if (num < 1000) return num.toString()
+    if (num < 1000000) {
+      const k = num / 1000
+      return k % 1 === 0 ? `${k}k` : `${k.toFixed(1)}k`
+    }
+    if (num < 1000000000) {
+      const m = num / 1000000
+      return m % 1 === 0 ? `${m}m` : `${m.toFixed(1)}m`
+    }
+    const b = num / 1000000000
+    return b % 1 === 0 ? `${b}b` : `${b.toFixed(1)}b`
+  }
+
+  const formatLargePrice = (price: number | string): string => {
+    const value =
+      typeof price === 'string' ? Number(price.replace(',', '.')) : price
+    const safe = Number.isFinite(value) ? value : 0
+
+    if (safe < 10000) {
+      return new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+      }).format(safe)
+    }
+
+    if (safe < 1000000) {
+      const k = safe / 1000
+      const formatted = k % 1 === 0 ? `${k}k` : `${k.toFixed(3)}k`
+      return `R$ ${formatted}`
+    }
+
+    if (safe < 1000000000) {
+      const m = safe / 1000000
+      const formatted = m % 1 === 0 ? `${m}m` : `${m.toFixed(3)}m`
+      return `R$ ${formatted}`
+    }
+
+    const b = safe / 1000000000
+    const formatted = b % 1 === 0 ? `${b}b` : `${b.toFixed(3)}b`
+    return `R$ ${formatted}`
   }
 
   const produtos = produtosData?.produtos || []
@@ -151,7 +196,6 @@ function SellerProductsDashboard() {
       }
     >
       <View className="px-6 pt-6">
-        {/* Cards de Insights */}
         <View className="flex-row flex-wrap -mx-2 mb-6">
           <View className="w-1/2 px-2 mb-4">
             <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
@@ -203,8 +247,8 @@ function SellerProductsDashboard() {
                 <View className="bg-purple-100 rounded-full p-2 mr-2">
                   <Ionicons name="cash-outline" size={20} color="#8B5CF6" />
                 </View>
-                <Text className="text-frg900 font-bold text-lg">
-                  {formatPrice(valorTotalEstoque)}
+                <Text className="text-frg900 font-bold text-base flex-1">
+                  {formatLargePrice(valorTotalEstoque)}
                 </Text>
               </View>
               <Text className="text-system-text text-sm">Valor em Estoque</Text>
@@ -212,7 +256,6 @@ function SellerProductsDashboard() {
           </View>
         </View>
 
-        {/* Aviso se não tiver localização */}
         {!hasStoreLocation && (
           <View className="bg-yellow-50 rounded-xl p-4 mb-4 border border-yellow-200">
             <View className="flex-row items-start">
@@ -325,7 +368,7 @@ function SellerProductsDashboard() {
                           color="#9FABB9"
                         />
                         <Text className="text-system-text text-sm ml-1">
-                          Estoque: {produto.estoque}
+                          Estoque: {formatLargeNumber(produto.estoque)}
                         </Text>
                       </View>
                     </View>
@@ -397,23 +440,16 @@ export default function HomeScreen() {
   )
   const pagerRef = useRef<PagerView>(null)
   const queryClient = useQueryClient()
-  const { setProfile, profile, clearProfile } = useCustomerStore()
+  const { setProfile, profile } = useCustomerStore()
   const { getTotalItems } = useCart()
-  const { accessToken } = useAuthStore()
+  const { accessToken, userId } = useAuthStore()
 
   const isVendedor = profile?.tipo === 'vendedor'
 
   const { data: customerProfile, isLoading: isLoadingProfile } = useQuery({
-    queryKey: ['customerProfile'],
+    queryKey: ['customerProfile', userId],
     queryFn: getCustomerProfile,
-    enabled: !!accessToken && !isVendedor,
-    retry: 1,
-  })
-
-  const { data: sellerProfile, isLoading: isLoadingSellerProfile } = useQuery({
-    queryKey: ['sellerProfile'],
-    queryFn: getSellerProfile,
-    enabled: !!accessToken && isVendedor,
+    enabled: !!accessToken && !!userId,
     retry: 1,
   })
 
@@ -422,7 +458,7 @@ export default function HomeScreen() {
     isLoading: isLoadingProdutos,
     refetch: refetchProdutos,
   } = useQuery({
-    queryKey: ['produtos', 'home', selectedCategory, searchText],
+    queryKey: ['produtos', 'home', userId, selectedCategory, searchText],
     queryFn: () =>
       listarProdutos({
         busca: searchText || undefined,
@@ -431,43 +467,49 @@ export default function HomeScreen() {
         pagina: 1,
         limite: 20,
       }),
-    enabled: !isVendedor,
+    enabled: !isVendedor && !!userId,
   })
 
   const { data: categoriasData } = useQuery({
-    queryKey: ['categorias'],
+    queryKey: ['categorias', userId],
     queryFn: listarCategorias,
-    enabled: !isVendedor,
+    enabled: !isVendedor && !!userId,
   })
 
   const { data: favoritosData } = useQuery({
-    queryKey: ['favoritos'],
+    queryKey: ['favoritos', userId],
     queryFn: listarFavoritos,
-    enabled: !isVendedor,
+    enabled: !isVendedor && !!userId,
   })
 
   const { data: produtoDetalhe, isLoading: isLoadingDetalhe } = useQuery({
-    queryKey: ['produto', selectedProductId],
+    queryKey: ['produto', userId, selectedProductId],
     queryFn: () => obterProduto(selectedProductId!),
-    enabled: !!selectedProductId && !isVendedor,
+    enabled: !!selectedProductId && !isVendedor && !!userId,
   })
 
   const { data: vendedorData } = useQuery({
-    queryKey: ['vendedor', produtoDetalhe?.vendedorId],
+    queryKey: ['vendedor', userId, produtoDetalhe?.vendedorId],
     queryFn: () => obterVendedorUsuario(produtoDetalhe!.vendedorId!),
-    enabled: !!produtoDetalhe?.vendedorId && !isVendedor,
+    enabled: !!produtoDetalhe?.vendedorId && !isVendedor && !!userId,
   })
 
   const { data: variacoesData } = useQuery({
-    queryKey: ['variacoes', selectedProductId],
+    queryKey: ['variacoes', userId, selectedProductId],
     queryFn: () => listarVariacoesProduto(selectedProductId!),
-    enabled: !!selectedProductId && !isVendedor,
+    enabled: !!selectedProductId && !isVendedor && !!userId,
   })
 
   const { data: imagensProdutoData } = useQuery({
-    queryKey: ['imagens-produto', selectedProductId],
+    queryKey: ['imagens-produto', userId, selectedProductId],
     queryFn: () => listarImagensProduto(selectedProductId!),
-    enabled: !!selectedProductId && !isVendedor,
+    enabled: !!selectedProductId && !isVendedor && !!userId,
+  })
+
+  const { data: avaliacoesData } = useQuery({
+    queryKey: ['avaliacoes', userId, selectedProductId],
+    queryFn: () => listarAvaliacoesProduto(selectedProductId!),
+    enabled: !!selectedProductId && !isVendedor && !!userId,
   })
 
   const imagemPrincipalProduto =
@@ -481,50 +523,20 @@ export default function HomeScreen() {
   const addFavoriteMutation = useMutation({
     mutationFn: adicionarFavorito,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['favoritos'] })
+      queryClient.invalidateQueries({ queryKey: ['favoritos', userId] })
     },
   })
 
   const removeFavoriteMutation = useMutation({
     mutationFn: removerFavorito,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['favoritos'] })
+      queryClient.invalidateQueries({ queryKey: ['favoritos', userId] })
     },
   })
 
   useEffect(() => {
-    if (customerProfile) {
-      setProfile(customerProfile)
-    } else if (sellerProfile) {
-      // Converter SellerProfileRes para CustomerProfileRes para manter compatibilidade
-      setProfile({
-        id: sellerProfile.id,
-        uuid: sellerProfile.uuid,
-        nome: sellerProfile.nome,
-        email: sellerProfile.email,
-        cpf: sellerProfile.cpf,
-        tipo: 'vendedor',
-        telefone: sellerProfile.telefone,
-        emailVerificado: sellerProfile.emailVerificado,
-      })
-    } else if (
-      !isLoadingProfile &&
-      !isLoadingSellerProfile &&
-      accessToken &&
-      !profile
-    ) {
-      clearProfile()
-    }
-  }, [
-    customerProfile,
-    sellerProfile,
-    isLoadingProfile,
-    isLoadingSellerProfile,
-    accessToken,
-    profile,
-    setProfile,
-    clearProfile,
-  ])
+    if (customerProfile) setProfile(customerProfile)
+  }, [customerProfile, setProfile])
 
   useEffect(() => {
     if (produtoDetalhe) {
@@ -559,6 +571,20 @@ export default function HomeScreen() {
       style: 'currency',
       currency: 'BRL',
     }).format(safe)
+  }
+
+  const formatLargeNumber = (num: number): string => {
+    if (num < 1000) return num.toString()
+    if (num < 1000000) {
+      const k = num / 1000
+      return k % 1 === 0 ? `${k}k` : `${k.toFixed(1)}k`
+    }
+    if (num < 1000000000) {
+      const m = num / 1000000
+      return m % 1 === 0 ? `${m}m` : `${m.toFixed(1)}m`
+    }
+    const b = num / 1000000000
+    return b % 1 === 0 ? `${b}b` : `${b.toFixed(1)}b`
   }
 
   const handleToggleFavorite = (produtoId: string) => {
@@ -1005,7 +1031,7 @@ export default function HomeScreen() {
                           ({produtoDetalhe.totalAvaliacoes || 0} avaliações)
                         </Text>
                       </View>
-                      <View className="flex-row">
+                      <View className="flex-row mb-3">
                         {[1, 2, 3, 4, 5].map((star) => {
                           const rating = Number(
                             produtoDetalhe.avaliacaoMedia || 0,
@@ -1121,7 +1147,8 @@ export default function HomeScreen() {
                         </View>
                       </View>
                       <Text className="text-system-text text-sm">
-                        Estoque: {produtoDetalhe.estoque} unidades
+                        Estoque: {formatLargeNumber(produtoDetalhe.estoque)}{' '}
+                        unidades
                       </Text>
                     </View>
 
@@ -1202,7 +1229,8 @@ export default function HomeScreen() {
                                         </Text>
                                       )}
                                       <Text className="text-system-text text-xs">
-                                        Estoque: {variacao.estoque}
+                                        Estoque:{' '}
+                                        {formatLargeNumber(variacao.estoque)}
                                       </Text>
                                     </View>
                                   </View>
@@ -1217,6 +1245,75 @@ export default function HomeScreen() {
                           })}
                         </View>
                       )}
+
+                    {avaliacoesData && avaliacoesData.avaliacoes.length > 0 && (
+                      <View className="mb-4 px-4">
+                        <Text className="text-frg900 font-semibold text-base mb-3">
+                          Avaliações dos clientes
+                        </Text>
+                        <ScrollView
+                          className="max-h-64"
+                          showsVerticalScrollIndicator={false}
+                        >
+                          {avaliacoesData.avaliacoes
+                            .slice(0, 5)
+                            .map((avaliacao) => (
+                              <View
+                                key={avaliacao.id}
+                                className="mb-3 pb-3 border-b border-gray-100 last:border-0"
+                              >
+                                <View className="flex-row items-center justify-between mb-2">
+                                  <View className="flex-row items-center">
+                                    {avaliacao.usuarioNome && (
+                                      <Text className="text-frg900 font-semibold text-sm mr-2">
+                                        {avaliacao.usuarioNome}
+                                      </Text>
+                                    )}
+                                  </View>
+                                  <View className="flex-row items-center">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                      <Ionicons
+                                        key={star}
+                                        name={
+                                          star <= avaliacao.nota
+                                            ? 'star'
+                                            : 'star-outline'
+                                        }
+                                        size={14}
+                                        color={
+                                          star <= avaliacao.nota
+                                            ? '#FFD700'
+                                            : '#D1D5DB'
+                                        }
+                                      />
+                                    ))}
+                                  </View>
+                                </View>
+                                {avaliacao.titulo && (
+                                  <Text className="text-frg900 font-semibold text-xs mb-1">
+                                    {avaliacao.titulo}
+                                  </Text>
+                                )}
+                                {avaliacao.comentario && (
+                                  <Text className="text-system-text text-xs mb-2">
+                                    {avaliacao.comentario}
+                                  </Text>
+                                )}
+                                {avaliacao.respostaVendedor && (
+                                  <View className="mt-2 bg-blue-50 rounded-lg p-2">
+                                    <Text className="text-blue-900 font-semibold text-xs mb-1">
+                                      Resposta do vendedor:
+                                    </Text>
+                                    <Text className="text-blue-800 text-xs">
+                                      {avaliacao.respostaVendedor}
+                                    </Text>
+                                  </View>
+                                )}
+                              </View>
+                            ))}
+                        </ScrollView>
+                      </View>
+                    )}
 
                     <TouchableOpacity
                       className="bg-frgprimary rounded-xl py-4 mb-4"

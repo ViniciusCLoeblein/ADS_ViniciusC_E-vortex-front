@@ -256,3 +256,41 @@ export interface ListaVendedoresRes {
   limite: number
   totalPaginas: number
 }
+
+export interface CriarAvaliacaoReq {
+  pedidoId: string
+  produtoId: string
+  nota: number
+  titulo?: string
+  comentario?: string
+}
+
+export interface AvaliacaoRes {
+  id: string
+  produtoId: string
+  usuarioId?: string
+  usuarioNome?: string
+  nota: number
+  titulo: string | null
+  comentario: string | null
+  respostaVendedor: string | null
+  dataResposta: Date | null
+  criadoEm: Date
+}
+
+export interface AvaliacaoCriadaRes {
+  id: string
+  pedidoId: string
+  produtoId: string
+  usuarioId: string
+  nota: number
+  titulo: string | null
+  comentario: string | null
+  aprovada: boolean | null
+  criadoEm: Date
+}
+
+export interface ListaAvaliacoesRes {
+  avaliacoes: AvaliacaoRes[]
+  total: number
+}

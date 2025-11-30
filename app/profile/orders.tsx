@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import {
   View,
   Text,
@@ -15,12 +15,26 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { router } from 'expo-router'
 import PagerView from 'react-native-pager-view'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { listarPedidos, obterPedido, atualizarStatusPedido } from '@/services/customer'
+import {
+  useQuery,
+  useQueries,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query'
+import {
+  listarPedidos,
+  obterPedido,
+  atualizarStatusPedido,
+} from '@/services/customer'
 import { PedidoRes } from '@/services/customer/interface'
 import { useBackHandler } from '@/hooks/indext'
 import { useCustomerStore } from '@/stores/customer'
-import { listarImagensProduto } from '@/services/sales'
+import { useAuthStore } from '@/stores/auth'
+import {
+  listarImagensProduto,
+  criarAvaliacao,
+  listarAvaliacoesProduto,
+} from '@/services/sales'
 
 interface ProductImageProps {
   readonly produtoId: string
@@ -82,26 +96,187 @@ export default function OrdersScreen() {
   const [selectedPedidoId, setSelectedPedidoId] = useState<string | null>(null)
   const [showAvaliacao, setShowAvaliacao] = useState(false)
   const [showCancelModal, setShowCancelModal] = useState(false)
+  const [showEnviadoModal, setShowEnviadoModal] = useState(false)
+  const [showDatePicker, setShowDatePicker] = useState(false)
   const [motivoCancelamento, setMotivoCancelamento] = useState('')
+  const [codigoRastreamento, setCodigoRastreamento] = useState('')
+  const [transportadora, setTransportadora] = useState('')
+  const [previsaoEntrega, setPrevisaoEntrega] = useState('')
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const [avaliacoes, setAvaliacoes] = useState<
+    Record<string, { nota: number; comentario?: string }>
+  >({})
+  const [comentariosAvaliacao, setComentariosAvaliacao] = useState<
+    Record<string, string>
+  >({})
+  const [notasSelecionadas, setNotasSelecionadas] = useState<
+    Record<string, number>
+  >({})
   const pagerRef = useRef<PagerView>(null)
+  const isMountedRef = useRef(true)
   const queryClient = useQueryClient()
   const { profile } = useCustomerStore()
+  const { userId } = useAuthStore()
 
   const isVendedor = profile?.tipo === 'vendedor'
+
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
 
   const {
     data: pedidosData,
     isLoading,
     refetch,
   } = useQuery({
-    queryKey: ['pedidos'],
+    queryKey: ['pedidos', userId],
     queryFn: listarPedidos,
+    enabled: !!userId,
   })
 
-  const { data: pedidoDetalhe, isLoading: isLoadingDetalhe } = useQuery({
-    queryKey: ['pedido', selectedPedidoId],
+  const {
+    data: pedidoDetalhe,
+    isLoading: isLoadingDetalhe,
+    refetch: refetchPedidoDetalhe,
+  } = useQuery({
+    queryKey: ['pedido', userId, selectedPedidoId],
     queryFn: () => obterPedido(selectedPedidoId!),
-    enabled: !!selectedPedidoId,
+    enabled: !!selectedPedidoId && !!userId,
+  })
+
+  // Buscar avaliações existentes usando useQueries
+  const avaliacoesQueries = useQueries({
+    queries:
+      showAvaliacao && pedidoDetalhe?.itens && userId
+        ? pedidoDetalhe.itens.map((item) => ({
+            queryKey: [
+              'avaliacoes-produto',
+              userId,
+              item.produto_id,
+              selectedPedidoId,
+            ],
+            queryFn: () => listarAvaliacoesProduto(item.produto_id),
+            enabled: !!userId && !!item.produto_id && !!showAvaliacao,
+          }))
+        : [],
+  })
+
+  // Processar resultados das queries de avaliações
+  const avaliacoesDataString = avaliacoesQueries
+    .map((q) => (q.data ? JSON.stringify(q.data) : ''))
+    .join('|')
+
+  const avaliacoesProcessadas = useMemo(() => {
+    if (
+      !showAvaliacao ||
+      !pedidoDetalhe?.itens ||
+      !userId ||
+      avaliacoesQueries.length === 0
+    ) {
+      return null
+    }
+
+    const avaliacoesEncontradas: Record<
+      string,
+      { nota: number; comentario?: string }
+    > = {}
+    const comentariosEncontrados: Record<string, string> = {}
+
+    avaliacoesQueries.forEach((query, index) => {
+      if (query.data && pedidoDetalhe.itens[index]) {
+        const item = pedidoDetalhe.itens[index]
+        // Buscar avaliação do usuário atual
+        const avaliacaoUsuario = query.data.avaliacoes.find(
+          (av) => av.usuarioId === userId,
+        )
+
+        if (avaliacaoUsuario) {
+          avaliacoesEncontradas[item.produto_id] = {
+            nota: avaliacaoUsuario.nota,
+            comentario: avaliacaoUsuario.comentario || undefined,
+          }
+          if (avaliacaoUsuario.comentario) {
+            comentariosEncontrados[item.produto_id] =
+              avaliacaoUsuario.comentario
+          }
+        }
+      }
+    })
+
+    return { avaliacoesEncontradas, comentariosEncontrados }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showAvaliacao, pedidoDetalhe?.itens, userId, avaliacoesDataString])
+
+  useEffect(() => {
+    if (avaliacoesProcessadas && isMountedRef.current) {
+      setAvaliacoes(avaliacoesProcessadas.avaliacoesEncontradas)
+      setComentariosAvaliacao(avaliacoesProcessadas.comentariosEncontrados)
+    }
+  }, [avaliacoesProcessadas])
+
+  const criarAvaliacaoMutation = useMutation({
+    mutationFn: ({
+      pedidoId,
+      produtoId,
+      nota,
+      comentario,
+    }: {
+      pedidoId: string
+      produtoId: string
+      nota: number
+      comentario?: string
+    }) =>
+      criarAvaliacao({
+        pedidoId,
+        produtoId,
+        nota,
+        comentario: comentario || undefined,
+      }),
+    onMutate: async (variables) => {
+      // Atualizar estado local imediatamente (otimistic update)
+      if (!isMountedRef.current) return
+      setAvaliacoes((prev) => ({
+        ...prev,
+        [variables.produtoId]: {
+          nota: variables.nota,
+          comentario: variables.comentario,
+        },
+      }))
+      setNotasSelecionadas((prev) => {
+        const newState = { ...prev }
+        delete newState[variables.produtoId]
+        return newState
+      })
+      setComentariosAvaliacao((prev) => {
+        const newState = { ...prev }
+        delete newState[variables.produtoId]
+        return newState
+      })
+    },
+    onSuccess: () => {
+      if (!isMountedRef.current) return
+      queryClient.invalidateQueries({ queryKey: ['produto'] })
+    },
+    onError: (error, variables) => {
+      if (!isMountedRef.current) return
+      setAvaliacoes((prev) => {
+        const newState = { ...prev }
+        delete newState[variables.produtoId]
+        return newState
+      })
+      // Restaurar comentário
+      if (variables.comentario) {
+        setComentariosAvaliacao((prev) => ({
+          ...prev,
+          [variables.produtoId]: variables.comentario || '',
+        }))
+      }
+      console.error('Erro ao criar avaliação:', error)
+      Alert.alert('Erro', 'Não foi possível registrar a avaliação.')
+    },
   })
 
   const atualizarStatusMutation = useMutation({
@@ -109,21 +284,67 @@ export default function OrdersScreen() {
       id,
       status,
       motivoCancelamento,
+      codigoRastreamento,
+      transportadora,
+      previsaoEntrega,
     }: {
       id: string
       status: string
       motivoCancelamento?: string
+      codigoRastreamento?: string
+      transportadora?: string
+      previsaoEntrega?: string
     }) =>
       atualizarStatusPedido(id, {
-        status: status as any,
+        status: status as
+          | 'pendente'
+          | 'pago'
+          | 'processando'
+          | 'enviado'
+          | 'entregue'
+          | 'cancelado',
         motivoCancelamento,
+        codigoRastreamento,
+        transportadora,
+        previsaoEntrega,
       }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pedidos'] })
-      queryClient.invalidateQueries({ queryKey: ['pedido', selectedPedidoId] })
+    onSuccess: async (data, variables) => {
+      if (!isMountedRef.current) return
+
+      setShowEnviadoModal(false)
+      setShowCancelModal(false)
+      setCodigoRastreamento('')
+      setTransportadora('')
+      setPrevisaoEntrega('')
+      setSelectedDate(null)
+      setMotivoCancelamento('')
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['pedidos', userId] }),
+        queryClient.invalidateQueries({
+          queryKey: ['pedido', userId, selectedPedidoId],
+        }),
+      ])
+
+      // Refetch manual para garantir atualização imediata
+      if (selectedPedidoId) {
+        refetchPedidoDetalhe()
+      }
+      refetch()
+
       Alert.alert('Sucesso', 'Status do pedido atualizado com sucesso!')
-      if (pedidoDetalhe?.status === 'enviado') {
-        setShowAvaliacao(true)
+
+      // Se o status atualizado foi 'enviado' e não é vendedor, mostrar avaliação
+      if (
+        variables.status === 'enviado' &&
+        !isVendedor &&
+        isMountedRef.current
+      ) {
+        setTimeout(() => {
+          if (isMountedRef.current) {
+            setShowAvaliacao(true)
+          }
+        }, 500)
       }
     },
     onError: () => {
@@ -147,6 +368,30 @@ export default function OrdersScreen() {
       hour: '2-digit',
       minute: '2-digit',
     }).format(date)
+  }
+
+  const formatDateForInput = (date: Date) => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  const getNextDays = () => {
+    const days = []
+    const today = new Date()
+    for (let i = 0; i < 30; i++) {
+      const date = new Date(today)
+      date.setDate(today.getDate() + i)
+      days.push(date)
+    }
+    return days
+  }
+
+  const handleSelectDate = (date: Date) => {
+    setSelectedDate(date)
+    setPrevisaoEntrega(formatDateForInput(date))
+    setShowDatePicker(false)
   }
 
   const getStatusColor = (status: string) => {
@@ -294,12 +539,12 @@ export default function OrdersScreen() {
         <View className="px-6 pt-4">
           <View className="bg-white rounded-2xl p-6 mb-4 shadow-sm border border-gray-100">
             <View className="flex-row items-center justify-between mb-4">
-              <Text className="text-frg900 font-bold text-xl">
-                Pedido #{pedidoDetalhe.id.slice(-8).toUpperCase()}
-              </Text>
               <TouchableOpacity onPress={handleBackToList}>
                 <Ionicons name="arrow-back" size={24} color="#9FABB9" />
               </TouchableOpacity>
+              <Text className="text-frg900 font-bold text-xl">
+                Pedido #{pedidoDetalhe.id.slice(-8).toUpperCase()}
+              </Text>
             </View>
 
             <View className="mb-4 pb-4 border-b border-gray-100">
@@ -351,9 +596,9 @@ export default function OrdersScreen() {
                   />
                   <View className="flex-1">
                     <Text className="text-frg900 font-semibold text-sm mb-1">
-                      {item.nome_produto || 'Produto'}
+                      {item?.nome_produto || 'Produto'}
                     </Text>
-                    {item.variacao_descricao && (
+                    {!!item?.variacao_descricao && (
                       <Text className="text-system-text text-xs mb-1">
                         {item.variacao_descricao}
                       </Text>
@@ -364,9 +609,7 @@ export default function OrdersScreen() {
                     </Text>
                   </View>
                   <Text className="text-frgprimary font-bold text-sm">
-                    {formatPrice(
-                      Number(item.preco_unitario) * item.quantidade,
-                    )}
+                    {formatPrice(Number(item.preco_unitario) * item.quantidade)}
                   </Text>
                 </View>
               ))}
@@ -385,7 +628,7 @@ export default function OrdersScreen() {
                   {formatPrice(pedidoDetalhe.frete)}
                 </Text>
               </View>
-              {pedidoDetalhe.desconto && pedidoDetalhe.desconto > 0 && (
+              {pedidoDetalhe?.desconto > 0 && (
                 <View className="flex-row items-center justify-between mb-2">
                   <Text className="text-system-text text-sm">Desconto:</Text>
                   <Text className="text-red-500 font-medium text-sm">
@@ -401,7 +644,6 @@ export default function OrdersScreen() {
               </View>
             </View>
 
-            {/* Informações de rastreamento */}
             {pedidoDetalhe.codigo_rastreamento && (
               <View className="mt-4 bg-blue-50 rounded-xl p-4 border border-blue-200">
                 <View className="flex-row items-start">
@@ -436,7 +678,6 @@ export default function OrdersScreen() {
               </View>
             )}
 
-            {/* Botões de ação - Cliente */}
             {!isVendedor && pedidoDetalhe.status === 'enviado' && (
               <View className="mt-4">
                 <TouchableOpacity
@@ -456,31 +697,13 @@ export default function OrdersScreen() {
               </View>
             )}
 
-            {/* Botões de ação - Vendedor */}
             {isVendedor &&
               (pedidoDetalhe.status === 'pago' ||
                 pedidoDetalhe.status === 'processando') && (
                 <View className="mt-4">
                   <TouchableOpacity
                     className="bg-purple-500 rounded-xl py-4 mb-3"
-                    onPress={() => {
-                      Alert.alert(
-                        'Marcar como enviado',
-                        'Deseja marcar este pedido como enviado?',
-                        [
-                          { text: 'Cancelar', style: 'cancel' },
-                          {
-                            text: 'Confirmar',
-                            onPress: () => {
-                              atualizarStatusMutation.mutate({
-                                id: pedidoDetalhe.id,
-                                status: 'enviado',
-                              })
-                            },
-                          },
-                        ],
-                      )
-                    }}
+                    onPress={() => setShowEnviadoModal(true)}
                     disabled={atualizarStatusMutation.isPending}
                   >
                     <View className="flex-row items-center justify-center">
@@ -516,7 +739,213 @@ export default function OrdersScreen() {
                 </View>
               )}
 
-            {/* Modal de cancelamento */}
+            <Modal
+              visible={showEnviadoModal}
+              transparent
+              animationType="fade"
+              onRequestClose={() => setShowEnviadoModal(false)}
+            >
+              <View className="flex-1 bg-black/50 items-center justify-center px-6">
+                <View className="bg-white rounded-2xl p-6 w-full max-w-md">
+                  <Text className="text-frg900 font-bold text-xl mb-4">
+                    Marcar como Enviado
+                  </Text>
+                  <Text className="text-system-text text-sm mb-4">
+                    Informe os dados de rastreamento (opcional):
+                  </Text>
+
+                  <Text className="text-frg900 font-semibold text-sm mb-2">
+                    Código de Rastreamento
+                  </Text>
+                  <TextInput
+                    className="bg-gray-100 border border-gray-200 rounded-xl px-4 py-3 text-base mb-4"
+                    placeholder="Ex: BR123456789BR"
+                    value={codigoRastreamento}
+                    onChangeText={setCodigoRastreamento}
+                  />
+
+                  <Text className="text-frg900 font-semibold text-sm mb-2">
+                    Transportadora
+                  </Text>
+                  <TextInput
+                    className="bg-gray-100 border border-gray-200 rounded-xl px-4 py-3 text-base mb-4"
+                    placeholder="Ex: Correios, Jadlog, etc."
+                    value={transportadora}
+                    onChangeText={setTransportadora}
+                  />
+
+                  <Text className="text-frg900 font-semibold text-sm mb-2">
+                    Previsão de Entrega
+                  </Text>
+                  <TouchableOpacity
+                    className="bg-gray-100 border border-gray-200 rounded-xl px-4 py-3 mb-4 flex-row items-center justify-between"
+                    onPress={() => setShowDatePicker(true)}
+                  >
+                    <Text
+                      className={`text-base ${
+                        previsaoEntrega ? 'text-frg900' : 'text-gray-400'
+                      }`}
+                    >
+                      {previsaoEntrega
+                        ? new Date(previsaoEntrega).toLocaleDateString('pt-BR')
+                        : 'Selecione uma data'}
+                    </Text>
+                    <Ionicons
+                      name="calendar-outline"
+                      size={20}
+                      color="#9FABB9"
+                    />
+                  </TouchableOpacity>
+
+                  <View className="flex-row gap-3">
+                    <TouchableOpacity
+                      className="flex-1 bg-gray-200 rounded-xl py-3"
+                      onPress={() => {
+                        setShowEnviadoModal(false)
+                        setCodigoRastreamento('')
+                        setTransportadora('')
+                        setPrevisaoEntrega('')
+                        setSelectedDate(null)
+                      }}
+                    >
+                      <Text className="text-center font-semibold">
+                        Cancelar
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      className="flex-1 bg-purple-500 rounded-xl py-3"
+                      onPress={() => {
+                        atualizarStatusMutation.mutate({
+                          id: pedidoDetalhe.id,
+                          status: 'enviado',
+                          codigoRastreamento:
+                            codigoRastreamento.trim() || undefined,
+                          transportadora: transportadora.trim() || undefined,
+                          previsaoEntrega: previsaoEntrega.trim() || undefined,
+                        })
+                      }}
+                      disabled={atualizarStatusMutation.isPending}
+                    >
+                      <Text className="text-white text-center font-semibold">
+                        {atualizarStatusMutation.isPending
+                          ? 'Processando...'
+                          : 'Confirmar'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            </Modal>
+
+            <Modal
+              visible={showDatePicker}
+              transparent
+              animationType="slide"
+              onRequestClose={() => setShowDatePicker(false)}
+            >
+              <View className="flex-1 bg-black/50 items-center justify-center px-6">
+                <View className="bg-white rounded-2xl p-6 w-full max-w-md max-h-[80%]">
+                  <View className="flex-row items-center justify-between mb-4">
+                    <Text className="text-frg900 font-bold text-xl">
+                      Selecionar Data de Entrega
+                    </Text>
+                    <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                      <Ionicons name="close" size={24} color="#9FABB9" />
+                    </TouchableOpacity>
+                  </View>
+
+                  <ScrollView
+                    showsVerticalScrollIndicator={false}
+                    className="max-h-96"
+                  >
+                    <View className="flex-row flex-wrap -mx-1">
+                      {getNextDays().map((date) => {
+                        const isToday =
+                          date.toDateString() === new Date().toDateString()
+                        const isSelected =
+                          selectedDate &&
+                          date.toDateString() === selectedDate.toDateString()
+                        const dayName = date.toLocaleDateString('pt-BR', {
+                          weekday: 'short',
+                        })
+                        const dayNumber = date.getDate()
+                        const monthName = date.toLocaleDateString('pt-BR', {
+                          month: 'short',
+                        })
+                        const dateKey = formatDateForInput(date)
+
+                        return (
+                          <TouchableOpacity
+                            key={dateKey}
+                            className={`w-1/3 px-1 mb-2`}
+                            onPress={() => handleSelectDate(date)}
+                          >
+                            <View
+                              className={`rounded-xl p-3 border-2 min-h-[90px] ${
+                                isSelected
+                                  ? 'bg-purple-500 border-purple-500'
+                                  : isToday
+                                    ? 'bg-blue-50 border-blue-200'
+                                    : 'bg-gray-50 border-gray-200'
+                              }`}
+                            >
+                              <Text
+                                className={`text-xs font-semibold mb-1 text-center ${
+                                  isSelected
+                                    ? 'text-white'
+                                    : isToday
+                                      ? 'text-blue-600'
+                                      : 'text-gray-600'
+                                }`}
+                              >
+                                {dayName.toUpperCase()}
+                              </Text>
+                              <Text
+                                className={`text-lg font-bold text-center ${
+                                  isSelected
+                                    ? 'text-white'
+                                    : isToday
+                                      ? 'text-blue-600'
+                                      : 'text-frg900'
+                                }`}
+                              >
+                                {dayNumber}
+                              </Text>
+                              <Text
+                                className={`text-xs text-center ${
+                                  isSelected
+                                    ? 'text-white'
+                                    : isToday
+                                      ? 'text-blue-600'
+                                      : 'text-gray-500'
+                                }`}
+                              >
+                                {monthName}
+                              </Text>
+                              <View className="h-4 mt-1">
+                                {isToday && (
+                                  <Text className="text-xs text-center text-blue-600 font-semibold">
+                                    Hoje
+                                  </Text>
+                                )}
+                              </View>
+                            </View>
+                          </TouchableOpacity>
+                        )
+                      })}
+                    </View>
+                  </ScrollView>
+
+                  <TouchableOpacity
+                    className="bg-gray-200 rounded-xl py-3 mt-4"
+                    onPress={() => setShowDatePicker(false)}
+                  >
+                    <Text className="text-center font-semibold">Fechar</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Modal>
+
             <Modal
               visible={showCancelModal}
               transparent
@@ -548,7 +977,9 @@ export default function OrdersScreen() {
                         setMotivoCancelamento('')
                       }}
                     >
-                      <Text className="text-center font-semibold">Cancelar</Text>
+                      <Text className="text-center font-semibold">
+                        Cancelar
+                      </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       className="flex-1 bg-red-500 rounded-xl py-3"
@@ -559,8 +990,6 @@ export default function OrdersScreen() {
                             status: 'cancelado',
                             motivoCancelamento: motivoCancelamento.trim(),
                           })
-                          setShowCancelModal(false)
-                          setMotivoCancelamento('')
                         } else {
                           Alert.alert(
                             'Erro',
@@ -621,37 +1050,104 @@ export default function OrdersScreen() {
                   <Text className="text-frg900 font-bold text-base mb-3">
                     Avaliar Produtos
                   </Text>
-                  {pedidoDetalhe.itens.map((item) => (
-                    <View
-                      key={item.id}
-                      className="mb-4 pb-4 border-b border-gray-100 last:border-0"
-                    >
-                      <Text className="text-frg900 font-semibold text-sm mb-2">
-                        {item.nome_produto}
-                      </Text>
-                      <View className="flex-row items-center">
-                        {[1, 2, 3, 4, 5].map((star) => (
+                  {pedidoDetalhe.itens.map((item) => {
+                    const avaliacaoAtual = avaliacoes[item.produto_id]
+                    const comentarioAtual =
+                      comentariosAvaliacao[item.produto_id] || ''
+                    return (
+                      <View
+                        key={item.id}
+                        className="mb-4 pb-4 border-b border-gray-100 last:border-0"
+                      >
+                        <Text className="text-frg900 font-semibold text-sm mb-2">
+                          {item.nome_produto}
+                        </Text>
+                        <View className="flex-row items-center mb-3">
+                          {[1, 2, 3, 4, 5].map((star) => {
+                            const notaSelecionada =
+                              notasSelecionadas[item.produto_id] ||
+                              avaliacaoAtual?.nota ||
+                              0
+                            const isPintada = star <= notaSelecionada
+                            return (
+                              <TouchableOpacity
+                                key={star}
+                                className="mr-2"
+                                onPress={() => {
+                                  // Apenas selecionar a nota, não enviar ainda
+                                  setNotasSelecionadas((prev) => ({
+                                    ...prev,
+                                    [item.produto_id]: star,
+                                  }))
+                                }}
+                                disabled={criarAvaliacaoMutation.isPending}
+                              >
+                                <Ionicons
+                                  name={isPintada ? 'star' : 'star-outline'}
+                                  size={24}
+                                  color={isPintada ? '#FFD700' : '#D1D5DB'}
+                                />
+                              </TouchableOpacity>
+                            )
+                          })}
+                        </View>
+                        {(!!notasSelecionadas[item.produto_id] ||
+                          !!avaliacaoAtual) && (
+                          <TextInput
+                            className="bg-inputbg border border-gray-200 rounded-xl px-4 py-3 text-base mb-2"
+                            placeholder="Adicione um comentário (opcional)"
+                            placeholderTextColor="#9FABB9"
+                            value={comentarioAtual}
+                            onChangeText={(text) =>
+                              setComentariosAvaliacao((prev) => ({
+                                ...prev,
+                                [item.produto_id]: text,
+                              }))
+                            }
+                            multiline
+                            numberOfLines={3}
+                            textAlignVertical="top"
+                            returnKeyType="done"
+                          />
+                        )}
+                        {!!notasSelecionadas[item.produto_id] && (
                           <TouchableOpacity
-                            key={star}
-                            className="mr-2"
+                            className="bg-frgprimary rounded-xl py-3 px-4 mb-2"
                             onPress={() => {
-                              // TODO: Implementar avaliação
-                              Alert.alert(
-                                'Avaliação',
-                                `Avaliar ${item.nome_produto} com ${star} estrela(s)`,
-                              )
+                              const nota = notasSelecionadas[item.produto_id]
+                              const comentario =
+                                comentariosAvaliacao[item.produto_id] || ''
+                              criarAvaliacaoMutation.mutate({
+                                pedidoId: selectedPedidoId!,
+                                produtoId: item.produto_id,
+                                nota,
+                                comentario: comentario || undefined,
+                              })
                             }}
+                            disabled={criarAvaliacaoMutation.isPending}
                           >
-                            <Ionicons
-                              name="star-outline"
-                              size={24}
-                              color="#FFD700"
-                            />
+                            <Text className="text-white text-center font-semibold">
+                              {criarAvaliacaoMutation.isPending
+                                ? 'Enviando...'
+                                : 'Enviar Avaliação'}
+                            </Text>
                           </TouchableOpacity>
-                        ))}
+                        )}
+                        {avaliacaoAtual && (
+                          <View className="mt-2">
+                            <Text className="text-system-text text-xs">
+                              Avaliado com {avaliacaoAtual.nota} estrela(s)
+                            </Text>
+                            {avaliacaoAtual.comentario && (
+                              <Text className="text-system-text text-xs mt-1">
+                                Comentário: {avaliacaoAtual.comentario}
+                              </Text>
+                            )}
+                          </View>
+                        )}
                       </View>
-                    </View>
-                  ))}
+                    )
+                  })}
                 </View>
               </View>
             )}
@@ -698,6 +1194,7 @@ export default function OrdersScreen() {
         style={{ flex: 1 }}
         initialPage={0}
         onPageSelected={handlePageSelected}
+        scrollEnabled={!!selectedPedidoId}
       >
         <View key="0" style={{ flex: 1 }}>
           <ScrollView

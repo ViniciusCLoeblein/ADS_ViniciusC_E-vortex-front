@@ -64,7 +64,6 @@ export default function RegisterScreen() {
     const userType = activeTab === 'customer' ? 'Cliente' : 'Vendedor'
 
     if (credentials) {
-      // Para clientes e vendedores, fazer login automático
       loginMutation.mutate({
         email: credentials.email,
         senha: credentials.password,

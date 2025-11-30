@@ -18,9 +18,11 @@ import { criarEndereco } from '@/services/customer'
 import { CriarEnderecoReq } from '@/services/customer/interface'
 import { maskCEP } from '@/constants/masks'
 import { buscarCep } from '@/services/brasilapi'
+import { useAuthStore } from '@/stores/auth'
 
 export default function NewAddressScreen() {
   const queryClient = useQueryClient()
+  const { userId } = useAuthStore()
   const [isLoadingCep, setIsLoadingCep] = useState(false)
   const [formData, setFormData] = useState<CriarEnderecoReq>({
     apelido: '',
@@ -66,7 +68,7 @@ export default function NewAddressScreen() {
   const createMutation = useMutation({
     mutationFn: criarEndereco,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['enderecos'] })
+      queryClient.invalidateQueries({ queryKey: ['enderecos', userId] })
       Alert.alert('Sucesso', 'Endereço criado com sucesso!')
       router.back()
     },

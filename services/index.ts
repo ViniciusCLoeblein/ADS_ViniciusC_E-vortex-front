@@ -54,6 +54,7 @@ instance.interceptors.response.use(
 
       const status = validStatus[e.response.status as keyof typeof validStatus]
       msgError = e.response?.data?.message ?? ''
+      console.warn('msgError', msgError)
       msgToast = status ? status() : handleGenericError()
     } else {
       msgToast = isNetworkError
@@ -63,7 +64,10 @@ instance.interceptors.response.use(
     }
 
     if (msgToast) {
-      toast.error('Ocorreu um erro!', `${ENV?.BASE_URL} - ${msgToast}`)
+      console.error(
+        'Ocorreu um erro!',
+        `${ENV?.BASE_URL}${e?.response?.config?.url} - ${msgToast}`,
+      )
     }
 
     return Promise.reject(new Error(msgError))

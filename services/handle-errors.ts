@@ -21,7 +21,7 @@ export const handleUnauthorizedError = (
     return ''
   } else {
     if (!url?.includes('/auth/')) {
-      Linking.openURL('evortex://login')
+      // Linking.openURL('evortex://login')
     }
     return msg.replace('UnauthorizedException:', '').trim()
   }

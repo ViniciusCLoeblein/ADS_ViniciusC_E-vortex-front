@@ -10,7 +10,6 @@ import {
 import { Ionicons } from '@expo/vector-icons'
 import { useMutation } from '@tanstack/react-query'
 import {
-  formatCPF,
   formatCNPJ,
   formatPhone,
   validateSellerForm,
@@ -35,7 +34,6 @@ export default function SellerForm({ onSuccess }: SellerFormProps) {
     phone: '',
     password: '',
     confirmPassword: '',
-    cpf: '',
     cnpj: '',
     companyName: '',
     tradeName: '',
@@ -101,7 +99,7 @@ export default function SellerForm({ onSuccess }: SellerFormProps) {
         nome: form.name,
         email: form.email,
         senha: form.password,
-        cpf: form.cpf.replace(/\D/g, ''),
+        cpf: '',
         telefone: form.phone.replace(/\D/g, ''),
         cnpj: form.cnpj.replace(/\D/g, ''),
         razaoSocial: form.companyName,
@@ -174,24 +172,9 @@ export default function SellerForm({ onSuccess }: SellerFormProps) {
       </View>
 
       <View>
-        <Text className="text-frg900 font-medium mb-2">CPF</Text>
-        <TextInput
-          className="bg-inputbg border border-gray-200 rounded-xl px-4 py-4 text-base"
-          placeholder="000.000.000-00"
-          placeholderTextColor="#9FABB9"
-          value={form.cpf}
-          onChangeText={(text) => setForm({ ...form, cpf: formatCPF(text) })}
-          keyboardType="numeric"
-          maxLength={14}
-        />
-      </View>
-
-      <View>
         <View className="flex-row items-center justify-between mb-2">
           <Text className="text-frg900 font-medium">CNPJ</Text>
-          {isLoadingCnpj && (
-            <ActivityIndicator size="small" color="#437C99" />
-          )}
+          {isLoadingCnpj && <ActivityIndicator size="small" color="#437C99" />}
         </View>
         <TextInput
           className="bg-inputbg border border-gray-200 rounded-xl px-4 py-4 text-base"

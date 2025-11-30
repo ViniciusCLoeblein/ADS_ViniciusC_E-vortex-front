@@ -27,6 +27,7 @@ import {
 import type { ProdutoRes } from '@/services/sales/interface'
 import { useCart } from '@/contexts/CartContext'
 import { useBackHandler } from '@/hooks/indext'
+import { useAuthStore } from '@/stores/auth'
 
 export default function ProductsScreen() {
   const [searchText, setSearchText] = useState('')
@@ -39,13 +40,14 @@ export default function ProductsScreen() {
   const pagerRef = useRef<PagerView>(null)
   const queryClient = useQueryClient()
   const { getTotalItems } = useCart()
+  const { userId } = useAuthStore()
 
   const {
     data: produtosData,
     isLoading,
     refetch,
   } = useQuery({
-    queryKey: ['produtos', selectedCategory, searchText],
+    queryKey: ['produtos', userId, selectedCategory, searchText],
     queryFn: () =>
       listarProdutos({
         busca: searchText || undefined,
@@ -54,11 +56,13 @@ export default function ProductsScreen() {
         pagina: 1,
         limite: 50,
       }),
+    enabled: !!userId,
   })
 
   const { data: favoritosData } = useQuery({
-    queryKey: ['favoritos'],
+    queryKey: ['favoritos', userId],
     queryFn: listarFavoritos,
+    enabled: !!userId,
   })
 
   const favoritosIds = new Set(
@@ -68,26 +72,27 @@ export default function ProductsScreen() {
   const addFavoriteMutation = useMutation({
     mutationFn: adicionarFavorito,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['favoritos'] })
+      queryClient.invalidateQueries({ queryKey: ['favoritos', userId] })
     },
   })
 
   const removeFavoriteMutation = useMutation({
     mutationFn: removerFavorito,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['favoritos'] })
+      queryClient.invalidateQueries({ queryKey: ['favoritos', userId] })
     },
   })
 
   const { data: categoriasData } = useQuery({
-    queryKey: ['categorias'],
+    queryKey: ['categorias', userId],
     queryFn: listarCategorias,
+    enabled: !!userId,
   })
 
   const { data: produtoDetalhe, isLoading: isLoadingDetalhe } = useQuery({
-    queryKey: ['produto', selectedProductId],
+    queryKey: ['produto', userId, selectedProductId],
     queryFn: () => obterProduto(selectedProductId!),
-    enabled: !!selectedProductId,
+    enabled: !!selectedProductId && !!userId,
   })
 
   const handleToggleFavorite = (produtoId: string) => {

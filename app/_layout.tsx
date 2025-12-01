@@ -91,7 +91,6 @@ export default function RootLayout() {
     'profile/orders',
     'profile/addresses/new',
     'profile/cards/new',
-    'products',
     'favorites',
     'seller/products',
     'seller/products/new',

@@ -8,6 +8,7 @@ import {
   ProdutoDetalheRes,
   ProdutoCriadoRes,
   CriarProdutoReq,
+  AtualizarProdutoReq,
   ListarProdutosReq,
   FavoritosRes,
   CategoriaRes,
@@ -84,6 +85,17 @@ export async function listarProdutos(
 
 export async function obterProduto(id: string): Promise<ProdutoDetalheRes> {
   const response = await axios.get<ProdutoDetalheRes>(`/sales/produtos/${id}`)
+  return response.data
+}
+
+export async function atualizarProduto(
+  id: string,
+  data: AtualizarProdutoReq,
+): Promise<ProdutoCriadoRes> {
+  const response = await axios.put<ProdutoCriadoRes>(
+    `/sales/produtos/${id}`,
+    data,
+  )
   return response.data
 }
 

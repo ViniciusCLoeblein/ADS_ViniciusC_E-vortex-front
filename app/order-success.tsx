@@ -2,14 +2,21 @@ import { View, Text, TouchableOpacity } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
 import { router, useLocalSearchParams } from 'expo-router'
+import { useBackHandler } from '@/hooks/indext'
 
 export default function OrderSuccessScreen() {
   const params = useLocalSearchParams()
   const total = params.total as string
   const pedidoId = params.pedidoId as string | undefined
 
+  // Previne que o usuário volte com o botão de voltar do celular
+  useBackHandler(() => {
+    router.replace('/home')
+    return true // Previne o comportamento padrão
+  })
+
   const formatPrice = (price: string | number) => {
-    const numPrice = typeof price === 'string' ? parseFloat(price) : price
+    const numPrice = typeof price === 'string' ? Number.parseFloat(price) : price
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
@@ -29,7 +36,7 @@ export default function OrderSuccessScreen() {
         <Text className="text-system-text text-center mb-2">
           Seu pedido foi realizado com sucesso
         </Text>
-        {total && (
+        {!!total && (
           <Text className="text-frgprimary font-bold text-xl mb-8">
             Total: {formatPrice(total)}
           </Text>
@@ -58,7 +65,7 @@ export default function OrderSuccessScreen() {
 
           <TouchableOpacity
             className="bg-white border-2 border-frgprimary rounded-xl py-4"
-            onPress={() => router.push('/profile/orders')}
+            onPress={() => router.replace('/profile/orders')}
           >
             <Text className="text-frgprimary text-center text-lg font-semibold">
               Acompanhar Pedido

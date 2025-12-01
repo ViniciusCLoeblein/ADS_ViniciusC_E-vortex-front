@@ -110,6 +110,10 @@ export default function NewProductScreen() {
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set())
   const [precoDisplay, setPrecoDisplay] = useState('')
   const [precoPromocionalDisplay, setPrecoPromocionalDisplay] = useState('')
+  const [pesoDisplay, setPesoDisplay] = useState('')
+  const [alturaDisplay, setAlturaDisplay] = useState('')
+  const [larguraDisplay, setLarguraDisplay] = useState('')
+  const [profundidadeDisplay, setProfundidadeDisplay] = useState('')
   const [variacoes, setVariacoes] = useState<
     Array<Omit<CriarVariacaoReq, 'produtoId'>>
   >([])
@@ -739,17 +743,20 @@ export default function NewProductScreen() {
                 <TextInput
                   className="bg-inputbg border border-gray-200 rounded-xl px-4 py-3 text-base"
                   placeholder="0.00"
-                  value={formData.pesoKg > 0 ? formData.pesoKg.toString() : ''}
+                  value={pesoDisplay}
                   onChangeText={(text) => {
                     // Permite números e ponto decimal, mas apenas um ponto
                     const cleaned = text.replace(/[^0-9.]/g, '')
                     const parts = cleaned.split('.')
                     let formatted = parts[0] || ''
                     if (parts.length > 1) {
-                      formatted += '.' + parts.slice(1).join('').substring(0, 2)
+                      // Permite até 3 casas decimais
+                      formatted += '.' + parts.slice(1).join('').substring(0, 3)
                     }
-                    const value = formatted ? parseFloat(formatted) : 0
-                    setFormData({ ...formData, pesoKg: value })
+                    setPesoDisplay(formatted)
+                    // Permite valores como 0, 0.500, etc.
+                    const value = formatted === '' ? 0 : Number.parseFloat(formatted)
+                    setFormData({ ...formData, pesoKg: Number.isNaN(value) ? 0 : value })
                   }}
                   keyboardType="decimal-pad"
                 />
@@ -774,21 +781,19 @@ export default function NewProductScreen() {
                     <TextInput
                       className="bg-inputbg border border-gray-200 rounded-xl px-4 py-3 text-base"
                       placeholder="0.00"
-                      value={
-                        formData.alturaCm > 0
-                          ? formData.alturaCm.toString()
-                          : ''
-                      }
+                      value={alturaDisplay}
                       onChangeText={(text) => {
                         // Permite números e ponto decimal, mas apenas um ponto
                         const cleaned = text.replace(/[^0-9.]/g, '')
                         const parts = cleaned.split('.')
                         let formatted = parts[0] || ''
                         if (parts.length > 1) {
+                          // Permite até 3 casas decimais
                           formatted +=
-                            '.' + parts.slice(1).join('').substring(0, 2)
+                            '.' + parts.slice(1).join('').substring(0, 3)
                         }
-                        const value = formatted ? parseFloat(formatted) : 0
+                        setAlturaDisplay(formatted)
+                        const value = formatted ? Number.parseFloat(formatted) : 0
                         setFormData({ ...formData, alturaCm: value })
                       }}
                       keyboardType="decimal-pad"
@@ -801,21 +806,19 @@ export default function NewProductScreen() {
                     <TextInput
                       className="bg-inputbg border border-gray-200 rounded-xl px-4 py-3 text-base"
                       placeholder="0.00"
-                      value={
-                        formData.larguraCm > 0
-                          ? formData.larguraCm.toString()
-                          : ''
-                      }
+                      value={larguraDisplay}
                       onChangeText={(text) => {
                         // Permite números e ponto decimal, mas apenas um ponto
                         const cleaned = text.replace(/[^0-9.]/g, '')
                         const parts = cleaned.split('.')
                         let formatted = parts[0] || ''
                         if (parts.length > 1) {
+                          // Permite até 3 casas decimais
                           formatted +=
-                            '.' + parts.slice(1).join('').substring(0, 2)
+                            '.' + parts.slice(1).join('').substring(0, 3)
                         }
-                        const value = formatted ? parseFloat(formatted) : 0
+                        setLarguraDisplay(formatted)
+                        const value = formatted ? Number.parseFloat(formatted) : 0
                         setFormData({ ...formData, larguraCm: value })
                       }}
                       keyboardType="decimal-pad"
@@ -828,21 +831,19 @@ export default function NewProductScreen() {
                     <TextInput
                       className="bg-inputbg border border-gray-200 rounded-xl px-4 py-3 text-base"
                       placeholder="0.00"
-                      value={
-                        formData.profundidadeCm > 0
-                          ? formData.profundidadeCm.toString()
-                          : ''
-                      }
+                      value={profundidadeDisplay}
                       onChangeText={(text) => {
                         // Permite números e ponto decimal, mas apenas um ponto
                         const cleaned = text.replace(/[^0-9.]/g, '')
                         const parts = cleaned.split('.')
                         let formatted = parts[0] || ''
                         if (parts.length > 1) {
+                          // Permite até 3 casas decimais
                           formatted +=
-                            '.' + parts.slice(1).join('').substring(0, 2)
+                            '.' + parts.slice(1).join('').substring(0, 3)
                         }
-                        const value = formatted ? parseFloat(formatted) : 0
+                        setProfundidadeDisplay(formatted)
+                        const value = formatted ? Number.parseFloat(formatted) : 0
                         setFormData({ ...formData, profundidadeCm: value })
                       }}
                       keyboardType="decimal-pad"

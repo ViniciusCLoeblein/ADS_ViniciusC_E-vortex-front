@@ -33,6 +33,15 @@ export async function listarEnderecos(): Promise<ListaEnderecosRes> {
   return response.data
 }
 
+export async function listarEnderecosVendedor(
+  vendedorId: string,
+): Promise<ListaEnderecosRes> {
+  const response = await axios.get<ListaEnderecosRes>(
+    `/customer/enderecos/vendedor/${vendedorId}`,
+  )
+  return response.data
+}
+
 export async function obterEndereco(id: string): Promise<EnderecoRes> {
   const response = await axios.get<EnderecoRes>(`/customer/enderecos/${id}`)
   return response.data

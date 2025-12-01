@@ -25,6 +25,7 @@ import {
   listarEnderecos,
   listarCartoes,
   criarPedido,
+  listarEnderecosVendedor,
 } from '@/services/customer'
 import { EnderecoRes } from '@/services/customer/interface'
 import { calcularFrete } from '@/lib/utils'
@@ -132,23 +133,23 @@ export default function CheckoutScreen() {
   const criarPedidoMutation = useMutation({
     mutationFn: criarPedido,
     onSuccess: async (pedido) => {
-      // Limpa o carrinho no contexto (que também limpa o AsyncStorage)
       await clearCart()
-      
-      // Limpa o carrinho no backend
+
       try {
         await limparCarrinho()
       } catch (error) {
         console.error('Erro ao limpar carrinho no backend:', error)
       }
-      
-      // Invalida todas as queries do carrinho
+
       queryClient.invalidateQueries({ queryKey: ['carrinho'] })
+
+      const descontoFinal = calcularDesconto()
+      const totalFinal = (carrinho?.total || 0) + valorFrete - descontoFinal
 
       router.replace({
         pathname: '/order-success',
         params: {
-          total: carrinho?.total.toString() || '0',
+          total: totalFinal.toString(),
           pedidoId: pedido?.id || '',
         },
       })
@@ -230,17 +231,25 @@ export default function CheckoutScreen() {
 
       setIsCalculandoFrete(true)
       try {
-        // TODO: Implementar API para buscar endereço da loja do vendedor
-        // Por enquanto, vamos usar uma solução temporária:
-        // O endereço da loja deveria ser buscado através de uma API que retorna
-        // o endereço com apelido "Localização da Loja" do vendedor específico
-        // Exemplo: GET /customer/enderecos/vendedor/{vendedorId}
+        const enderecosVendedor = await listarEnderecosVendedor(vendedorIdItem)
 
-        // Solução temporária: usar CEP padrão
-        // Em produção, isso deve ser substituído por uma busca real do endereço da loja
-        const cepLoja = '99001970' // CEP padrão temporário
+        const enderecoPrincipalVendedor = enderecosVendedor.enderecos.find(
+          (e) => e.principal,
+        )
 
-        const frete = await calcularFrete(cepLoja, enderecoCliente.cep)
+        if (!enderecoPrincipalVendedor) {
+          setValorFrete(0)
+          Alert.alert(
+            'Aviso',
+            'O vendedor não possui endereço principal cadastrado. Não foi possível calcular o frete.',
+          )
+          return
+        }
+
+        const frete = await calcularFrete(
+          enderecoPrincipalVendedor.cep,
+          enderecoCliente.cep,
+        )
         setValorFrete(frete)
       } catch (error) {
         console.error('Erro ao calcular frete:', error)
@@ -372,8 +381,9 @@ export default function CheckoutScreen() {
   const renderEnderecos = () => {
     if (isLoadingEnderecos) {
       return (
-        <View className="bg-white rounded-2xl p-4">
-          <Text className="text-system-text">Carregando endereços...</Text>
+        <View className="bg-white rounded-2xl p-4 items-center justify-center min-h-[100px]">
+          <ActivityIndicator size="large" color="#437C99" />
+          <Text className="text-system-text mt-4">Carregando endereços...</Text>
         </View>
       )
     }
@@ -438,8 +448,9 @@ export default function CheckoutScreen() {
   const renderCartoes = () => {
     if (isLoadingCartoes) {
       return (
-        <View className="bg-white rounded-2xl p-4">
-          <Text className="text-system-text">Carregando cartões...</Text>
+        <View className="bg-white rounded-2xl p-4 items-center justify-center min-h-[100px]">
+          <ActivityIndicator size="large" color="#437C99" />
+          <Text className="text-system-text mt-4">Carregando cartões...</Text>
         </View>
       )
     }
@@ -845,9 +856,7 @@ export default function CheckoutScreen() {
             <View className="flex-row items-center justify-between">
               <Text className="text-frg900 font-bold text-lg">Total:</Text>
               <Text className="text-frgprimary font-bold text-xl">
-                {formatPrice(
-                  carrinho.total + valorFrete - calcularDesconto(),
-                )}
+                {formatPrice(carrinho.total + valorFrete - calcularDesconto())}
               </Text>
             </View>
           </View>
@@ -856,16 +865,33 @@ export default function CheckoutScreen() {
         <View className="px-6 pb-4 pt-2">
           <TouchableOpacity
             className={`bg-frgprimary rounded-xl py-4 ${
-              isProcessing || !selectedEndereco || !selectedCartao
+              isProcessing ||
+              criarPedidoMutation.isPending ||
+              !selectedEndereco ||
+              !selectedCartao
                 ? 'opacity-50'
                 : ''
             }`}
             onPress={handleCheckout}
-            disabled={isProcessing || !selectedEndereco || !selectedCartao}
+            disabled={
+              isProcessing ||
+              criarPedidoMutation.isPending ||
+              !selectedEndereco ||
+              !selectedCartao
+            }
           >
-            <Text className="text-white text-center text-lg font-semibold">
-              {getButtonText()}
-            </Text>
+            {isProcessing || criarPedidoMutation.isPending ? (
+              <View className="flex-row items-center justify-center">
+                <ActivityIndicator size="small" color="#FFFFFF" />
+                <Text className="text-white text-center text-lg font-semibold ml-2">
+                  Processando...
+                </Text>
+              </View>
+            ) : (
+              <Text className="text-white text-center text-lg font-semibold">
+                {getButtonText()}
+              </Text>
+            )}
           </TouchableOpacity>
         </View>
       </View>

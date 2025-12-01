@@ -55,12 +55,17 @@ export const convertDateToISO = (date: string): string => {
   const month = cleanDate.substring(2, 4)
   const year = cleanDate.substring(4, 8)
 
-  // Validação básica
   const dayNum = parseInt(day, 10)
   const monthNum = parseInt(month, 10)
   const yearNum = parseInt(year, 10)
 
-  if (dayNum < 1 || dayNum > 31 || monthNum < 1 || monthNum > 12 || yearNum < 1900) {
+  if (
+    dayNum < 1 ||
+    dayNum > 31 ||
+    monthNum < 1 ||
+    monthNum > 12 ||
+    yearNum < 1900
+  ) {
     throw new Error('Data inválida')
   }
 

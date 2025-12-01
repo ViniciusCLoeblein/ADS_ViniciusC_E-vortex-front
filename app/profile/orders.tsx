@@ -135,6 +135,8 @@ export default function OrdersScreen() {
     queryKey: ['pedidos', userId],
     queryFn: listarPedidos,
     enabled: !!userId,
+    gcTime: 0,
+    staleTime: 0,
   })
 
   const {
@@ -145,9 +147,10 @@ export default function OrdersScreen() {
     queryKey: ['pedido', userId, selectedPedidoId],
     queryFn: () => obterPedido(selectedPedidoId!),
     enabled: !!selectedPedidoId && !!userId,
+    gcTime: 0,
+    staleTime: 0,
   })
 
-  // Buscar avaliações existentes usando useQueries
   const avaliacoesQueries = useQueries({
     queries:
       showAvaliacao && pedidoDetalhe?.itens && userId
@@ -164,7 +167,6 @@ export default function OrdersScreen() {
         : [],
   })
 
-  // Processar resultados das queries de avaliações
   const avaliacoesDataString = avaliacoesQueries
     .map((q) => (q.data ? JSON.stringify(q.data) : ''))
     .join('|')
@@ -188,7 +190,6 @@ export default function OrdersScreen() {
     avaliacoesQueries.forEach((query, index) => {
       if (query.data && pedidoDetalhe.itens[index]) {
         const item = pedidoDetalhe.itens[index]
-        // Buscar avaliação do usuário atual
         const avaliacaoUsuario = query.data.avaliacoes.find(
           (av) => av.usuarioId === userId,
         )
@@ -371,18 +372,40 @@ export default function OrdersScreen() {
   }
 
   const formatDateForInput = (date: Date) => {
+    // Usa métodos locais para evitar problemas de timezone
     const year = date.getFullYear()
     const month = String(date.getMonth() + 1).padStart(2, '0')
     const day = String(date.getDate()).padStart(2, '0')
     return `${year}-${month}-${day}`
   }
 
+  // Função para formatar data para exibição sem problemas de timezone
+  const formatDateForDisplay = (dateString: string) => {
+    // Parse a string YYYY-MM-DD como data local (não UTC)
+    const [year, month, day] = dateString.split('-').map(Number)
+    const date = new Date(year, month - 1, day)
+    return date.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    })
+  }
+
   const getNextDays = () => {
     const days = []
+    // Cria data local sem problemas de timezone
     const today = new Date()
+    const todayLocal = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+    )
     for (let i = 0; i < 30; i++) {
-      const date = new Date(today)
-      date.setDate(today.getDate() + i)
+      const date = new Date(
+        todayLocal.getFullYear(),
+        todayLocal.getMonth(),
+        todayLocal.getDate() + i,
+      )
       days.push(date)
     }
     return days
@@ -685,14 +708,25 @@ export default function OrdersScreen() {
                   onPress={handleMarcarComoRecebido}
                   disabled={atualizarStatusMutation.isPending}
                 >
-                  <View className="flex-row items-center justify-center">
-                    <Ionicons name="checkmark-circle" size={20} color="white" />
-                    <Text className="text-white text-center text-lg font-semibold ml-2">
-                      {atualizarStatusMutation.isPending
-                        ? 'Processando...'
-                        : 'Recebi o Pedido'}
-                    </Text>
-                  </View>
+                  {atualizarStatusMutation.isPending ? (
+                    <View className="flex-row items-center justify-center">
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                      <Text className="text-white text-center text-lg font-semibold ml-2">
+                        Processando...
+                      </Text>
+                    </View>
+                  ) : (
+                    <View className="flex-row items-center justify-center">
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={20}
+                        color="white"
+                      />
+                      <Text className="text-white text-center text-lg font-semibold ml-2">
+                        Recebi o Pedido
+                      </Text>
+                    </View>
+                  )}
                 </TouchableOpacity>
               </View>
             )}
@@ -706,14 +740,21 @@ export default function OrdersScreen() {
                     onPress={() => setShowEnviadoModal(true)}
                     disabled={atualizarStatusMutation.isPending}
                   >
-                    <View className="flex-row items-center justify-center">
-                      <Ionicons name="send" size={20} color="white" />
-                      <Text className="text-white text-center text-lg font-semibold ml-2">
-                        {atualizarStatusMutation.isPending
-                          ? 'Processando...'
-                          : 'Marcar como Enviado'}
-                      </Text>
-                    </View>
+                    {atualizarStatusMutation.isPending ? (
+                      <View className="flex-row items-center justify-center">
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                        <Text className="text-white text-center text-lg font-semibold ml-2">
+                          Processando...
+                        </Text>
+                      </View>
+                    ) : (
+                      <View className="flex-row items-center justify-center">
+                        <Ionicons name="send" size={20} color="white" />
+                        <Text className="text-white text-center text-lg font-semibold ml-2">
+                          Marcar como Enviado
+                        </Text>
+                      </View>
+                    )}
                   </TouchableOpacity>
                 </View>
               )}
@@ -727,14 +768,21 @@ export default function OrdersScreen() {
                     onPress={() => setShowCancelModal(true)}
                     disabled={atualizarStatusMutation.isPending}
                   >
-                    <View className="flex-row items-center justify-center">
-                      <Ionicons name="close-circle" size={20} color="white" />
-                      <Text className="text-white text-center text-lg font-semibold ml-2">
-                        {atualizarStatusMutation.isPending
-                          ? 'Processando...'
-                          : 'Cancelar Pedido'}
-                      </Text>
-                    </View>
+                    {atualizarStatusMutation.isPending ? (
+                      <View className="flex-row items-center justify-center">
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                        <Text className="text-white text-center text-lg font-semibold ml-2">
+                          Processando...
+                        </Text>
+                      </View>
+                    ) : (
+                      <View className="flex-row items-center justify-center">
+                        <Ionicons name="close-circle" size={20} color="white" />
+                        <Text className="text-white text-center text-lg font-semibold ml-2">
+                          Cancelar Pedido
+                        </Text>
+                      </View>
+                    )}
                   </TouchableOpacity>
                 </View>
               )}
@@ -787,7 +835,7 @@ export default function OrdersScreen() {
                       }`}
                     >
                       {previsaoEntrega
-                        ? new Date(previsaoEntrega).toLocaleDateString('pt-BR')
+                        ? formatDateForDisplay(previsaoEntrega)
                         : 'Selecione uma data'}
                     </Text>
                     <Ionicons
@@ -826,11 +874,18 @@ export default function OrdersScreen() {
                       }}
                       disabled={atualizarStatusMutation.isPending}
                     >
-                      <Text className="text-white text-center font-semibold">
-                        {atualizarStatusMutation.isPending
-                          ? 'Processando...'
-                          : 'Confirmar'}
-                      </Text>
+                      {atualizarStatusMutation.isPending ? (
+                        <View className="flex-row items-center justify-center">
+                          <ActivityIndicator size="small" color="#FFFFFF" />
+                          <Text className="text-white text-center font-semibold ml-2">
+                            Processando...
+                          </Text>
+                        </View>
+                      ) : (
+                        <Text className="text-white text-center font-semibold">
+                          Confirmar
+                        </Text>
+                      )}
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -860,11 +915,22 @@ export default function OrdersScreen() {
                   >
                     <View className="flex-row flex-wrap -mx-1">
                       {getNextDays().map((date) => {
+                        // Compara datas usando componentes locais para evitar problemas de timezone
+                        const today = new Date()
+                        const todayLocal = new Date(
+                          today.getFullYear(),
+                          today.getMonth(),
+                          today.getDate(),
+                        )
                         const isToday =
-                          date.toDateString() === new Date().toDateString()
+                          date.getFullYear() === todayLocal.getFullYear() &&
+                          date.getMonth() === todayLocal.getMonth() &&
+                          date.getDate() === todayLocal.getDate()
                         const isSelected =
                           selectedDate &&
-                          date.toDateString() === selectedDate.toDateString()
+                          date.getFullYear() === selectedDate.getFullYear() &&
+                          date.getMonth() === selectedDate.getMonth() &&
+                          date.getDate() === selectedDate.getDate()
                         const dayName = date.toLocaleDateString('pt-BR', {
                           weekday: 'short',
                         })
@@ -1074,7 +1140,6 @@ export default function OrdersScreen() {
                                 key={star}
                                 className="mr-2"
                                 onPress={() => {
-                                  // Apenas selecionar a nota, não enviar ainda
                                   setNotasSelecionadas((prev) => ({
                                     ...prev,
                                     [item.produto_id]: star,

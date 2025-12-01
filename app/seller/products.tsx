@@ -26,6 +26,7 @@ import {
   listarImagensProduto,
   excluirImagem,
   uploadImagem,
+  atualizarProduto,
 } from '@/services/sales'
 import { listarEnderecos } from '@/services/customer'
 import { useAuthStore } from '@/stores/auth'
@@ -96,14 +97,29 @@ export default function SellerProductsScreen() {
   const [currentPage, setCurrentPage] = useState(0)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [formData, setFormData] = useState<AtualizarProdutoReq>({
+    categoriaId: '',
+    sku: '',
     nome: '',
     descricao: '',
+    descricaoCurta: '',
     preco: 0,
     precoPromocional: undefined,
-    categoriaId: '',
+    pesoKg: 0,
+    alturaCm: 0,
+    larguraCm: 0,
+    profundidadeCm: 0,
     estoque: 0,
+    estoqueMinimo: 0,
+    tags: undefined,
+    destaque: false,
     ativo: true,
   })
+  const [precoDisplay, setPrecoDisplay] = useState('')
+  const [precoPromocionalDisplay, setPrecoPromocionalDisplay] = useState('')
+  const [pesoDisplay, setPesoDisplay] = useState('')
+  const [alturaDisplay, setAlturaDisplay] = useState('')
+  const [larguraDisplay, setLarguraDisplay] = useState('')
+  const [profundidadeDisplay, setProfundidadeDisplay] = useState('')
   const [newImages, setNewImages] = useState<
     Array<{ uri: string; id?: string }>
   >([])
@@ -152,18 +168,75 @@ export default function SellerProductsScreen() {
   const hasStoreLocation =
     enderecosData?.enderecos && enderecosData.enderecos.length > 0
 
+  // Função para formatar dinheiro durante a digitação
+  const formatMoneyInput = (value: string): string => {
+    const numbers = value.replace(/\D/g, '')
+    if (!numbers) return ''
+    const cents = Number.parseInt(numbers, 10)
+    const reais = cents / 100
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      minimumFractionDigits: 2,
+    }).format(reais)
+  }
+
+  // Função para converter valor formatado de volta para número
+  const parseMoneyInput = (value: string): number => {
+    if (!value) return 0
+    const numbers = value.replace(/\D/g, '')
+    if (!numbers) return 0
+    return Number.parseInt(numbers, 10) / 100
+  }
+
   useEffect(() => {
     if (produtoEdit) {
+      const preco = Number(produtoEdit.preco) || 0
+      const precoPromo = produtoEdit.precoPromocional
+        ? Number(produtoEdit.precoPromocional)
+        : undefined
+
       setFormData({
+        categoriaId: produtoEdit.categoriaId || '',
+        sku: produtoEdit.sku || '',
         nome: produtoEdit.nome,
         descricao: produtoEdit.descricao || '',
-        preco: Number(produtoEdit.preco) || 0,
-        precoPromocional: produtoEdit.precoPromocional
-          ? Number(produtoEdit.precoPromocional)
-          : undefined,
+        descricaoCurta: produtoEdit.descricaoCurta || '',
+        preco: preco,
+        precoPromocional: precoPromo,
+        pesoKg: Number(produtoEdit.pesoKg) || 0,
+        alturaCm: Number(produtoEdit.alturaCm) || 0,
+        larguraCm: Number(produtoEdit.larguraCm) || 0,
+        profundidadeCm: Number(produtoEdit.profundidadeCm) || 0,
         estoque: produtoEdit.estoque,
+        estoqueMinimo: produtoEdit.estoqueMinimo || 0,
+        tags: produtoEdit.tags || undefined,
+        destaque: produtoEdit.destaque || false,
         ativo: produtoEdit.ativo,
       })
+
+      // Atualiza os displays
+      setPrecoDisplay(preco > 0 ? formatMoneyInput((preco * 100).toString()) : '')
+      setPrecoPromocionalDisplay(
+        precoPromo && precoPromo > 0
+          ? formatMoneyInput((precoPromo * 100).toString())
+          : '',
+      )
+      setPesoDisplay(
+        produtoEdit.pesoKg ? Number(produtoEdit.pesoKg).toString() : '',
+      )
+      setAlturaDisplay(
+        produtoEdit.alturaCm ? Number(produtoEdit.alturaCm).toString() : '',
+      )
+      setLarguraDisplay(
+        produtoEdit.larguraCm ? Number(produtoEdit.larguraCm).toString() : '',
+      )
+      setProfundidadeDisplay(
+        produtoEdit.profundidadeCm
+          ? Number(produtoEdit.profundidadeCm).toString()
+          : '',
+      )
+
       setNewImages([])
       setImageErrors(new Set())
     }
@@ -191,6 +264,47 @@ export default function SellerProductsScreen() {
     mutationFn: uploadImagem,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['imagens', editingId] })
+    },
+  })
+
+  const updateProductMutation = useMutation({
+    mutationFn: (data: AtualizarProdutoReq) =>
+      atualizarProduto(editingId!, data),
+    onSuccess: async () => {
+      // Se houver novas imagens, fazer upload
+      if (newImages.length > 0 && editingId) {
+        const totalImages = imagens?.imagens.length || 0
+        const uploadPromises = newImages.map((image, index) => {
+          return uploadImageMutation
+            .mutateAsync({
+              produtoId: editingId,
+              tipo: totalImages + index === 0 ? 'principal' : 'galeria',
+              file: {
+                uri: image.uri,
+                type: 'image/jpeg',
+                name: `product-image-${Date.now()}-${index}.jpg`,
+              },
+              ordem: totalImages + index + 1,
+            })
+            .catch((error) => {
+              console.error(`Erro ao fazer upload da imagem ${index + 1}:`, error)
+              return null
+            })
+        })
+        await Promise.all(uploadPromises)
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['produtos', 'vendedor', sellerUserId] })
+      queryClient.invalidateQueries({ queryKey: ['produto', sellerUserId, editingId] })
+      Alert.alert('Sucesso', 'Produto atualizado com sucesso!', [
+        {
+          text: 'OK',
+          onPress: () => handleBackToList(),
+        },
+      ])
+    },
+    onError: () => {
+      Alert.alert('Erro', 'Não foi possível atualizar o produto.')
     },
   })
 
@@ -737,6 +851,20 @@ export default function SellerProductsScreen() {
                     <View className="bg-white rounded-2xl p-6 mb-6 shadow-sm">
                       <View className="mb-4">
                         <Text className="text-frg900 font-medium mb-2">
+                          SKU *
+                        </Text>
+                        <TextInput
+                          className="bg-inputbg border border-gray-200 rounded-xl px-4 py-3 text-base"
+                          placeholder="Ex: PROD-1234"
+                          value={formData.sku || ''}
+                          onChangeText={(text) =>
+                            setFormData({ ...formData, sku: text.toUpperCase() })
+                          }
+                        />
+                      </View>
+
+                      <View className="mb-4">
+                        <Text className="text-frg900 font-medium mb-2">
                           Nome *
                         </Text>
                         <TextInput
@@ -751,12 +879,27 @@ export default function SellerProductsScreen() {
 
                       <View className="mb-4">
                         <Text className="text-frg900 font-medium mb-2">
-                          Descrição
+                          Descrição Curta *
                         </Text>
                         <TextInput
                           className="bg-inputbg border border-gray-200 rounded-xl px-4 py-3 text-base"
-                          placeholder="Descrição do produto"
-                          value={formData.descricao}
+                          placeholder="Breve descrição do produto"
+                          value={formData.descricaoCurta || ''}
+                          onChangeText={(text) =>
+                            setFormData({ ...formData, descricaoCurta: text })
+                          }
+                          maxLength={500}
+                        />
+                      </View>
+
+                      <View className="mb-4">
+                        <Text className="text-frg900 font-medium mb-2">
+                          Descrição Completa
+                        </Text>
+                        <TextInput
+                          className="bg-inputbg border border-gray-200 rounded-xl px-4 py-3 text-base"
+                          placeholder="Descrição detalhada do produto"
+                          value={formData.descricao || ''}
                           onChangeText={(text) =>
                             setFormData({ ...formData, descricao: text })
                           }
@@ -771,20 +914,15 @@ export default function SellerProductsScreen() {
                         </Text>
                         <TextInput
                           className="bg-inputbg border border-gray-200 rounded-xl px-4 py-3 text-base"
-                          placeholder="0.00"
-                          value={
-                            formData.preco && formData.preco > 0
-                              ? formData.preco.toString()
-                              : ''
-                          }
+                          placeholder="R$ 0,00"
+                          value={precoDisplay}
                           onChangeText={(text) => {
-                            const value =
-                              Number.parseFloat(
-                                text.replaceAll(/[^0-9.]/g, ''),
-                              ) || 0
+                            const formatted = formatMoneyInput(text)
+                            setPrecoDisplay(formatted)
+                            const value = parseMoneyInput(formatted)
                             setFormData({ ...formData, preco: value })
                           }}
-                          keyboardType="decimal-pad"
+                          keyboardType="numeric"
                         />
                       </View>
 
@@ -794,23 +932,18 @@ export default function SellerProductsScreen() {
                         </Text>
                         <TextInput
                           className="bg-inputbg border border-gray-200 rounded-xl px-4 py-3 text-base"
-                          placeholder="0.00"
-                          value={
-                            formData.precoPromocional
-                              ? formData.precoPromocional.toString()
-                              : ''
-                          }
+                          placeholder="R$ 0,00"
+                          value={precoPromocionalDisplay}
                           onChangeText={(text) => {
-                            const value =
-                              Number.parseFloat(
-                                text.replaceAll(/[^0-9.]/g, ''),
-                              ) || 0
+                            const formatted = formatMoneyInput(text)
+                            setPrecoPromocionalDisplay(formatted)
+                            const value = parseMoneyInput(formatted)
                             setFormData({
                               ...formData,
                               precoPromocional: value > 0 ? value : undefined,
                             })
                           }}
-                          keyboardType="decimal-pad"
+                          keyboardType="numeric"
                         />
                       </View>
 
@@ -873,6 +1006,177 @@ export default function SellerProductsScreen() {
                         />
                       </View>
 
+                      <View className="mb-4">
+                        <Text className="text-frg900 font-medium mb-2">
+                          Estoque Mínimo *
+                        </Text>
+                        <TextInput
+                          className="bg-inputbg border border-gray-200 rounded-xl px-4 py-3 text-base"
+                          placeholder="0"
+                          value={
+                            formData.estoqueMinimo && formData.estoqueMinimo > 0
+                              ? formData.estoqueMinimo.toString()
+                              : ''
+                          }
+                          onChangeText={(text) => {
+                            const value =
+                              Number.parseInt(text.replaceAll(/\D/g, ''), 10) ||
+                              0
+                            setFormData({ ...formData, estoqueMinimo: value })
+                          }}
+                          keyboardType="numeric"
+                        />
+                      </View>
+
+                      <View className="mb-4">
+                        <Text className="text-frg900 font-medium mb-2">
+                          Peso (kg)
+                        </Text>
+                        <TextInput
+                          className="bg-inputbg border border-gray-200 rounded-xl px-4 py-3 text-base"
+                          placeholder="0.00"
+                          value={pesoDisplay}
+                          onChangeText={(text) => {
+                            const cleaned = text.replace(/[^0-9.]/g, '')
+                            const parts = cleaned.split('.')
+                            let formatted = parts[0] || ''
+                            if (parts.length > 1) {
+                              formatted +=
+                                '.' + parts.slice(1).join('').substring(0, 3)
+                            }
+                            setPesoDisplay(formatted)
+                            const value = formatted
+                              ? Number.parseFloat(formatted)
+                              : 0
+                            setFormData({
+                              ...formData,
+                              pesoKg: Number.isNaN(value) ? 0 : value,
+                            })
+                          }}
+                          keyboardType="decimal-pad"
+                        />
+                        <Text className="text-system-text text-xs mt-1">
+                          Opcional - necessário apenas para cálculo de frete
+                        </Text>
+                      </View>
+
+                      <View className="mb-4">
+                        <Text className="text-frg900 font-medium mb-2">
+                          Dimensões (cm)
+                        </Text>
+                        <Text className="text-system-text text-xs mb-3">
+                          Opcional - preencha apenas os campos relevantes para
+                          seu produto
+                        </Text>
+                        <View className="flex-row gap-2">
+                          <View className="flex-1">
+                            <Text className="text-system-text text-xs mb-1">
+                              Altura
+                            </Text>
+                            <TextInput
+                              className="bg-inputbg border border-gray-200 rounded-xl px-4 py-3 text-base"
+                              placeholder="0.00"
+                              value={alturaDisplay}
+                              onChangeText={(text) => {
+                                const cleaned = text.replace(/[^0-9.]/g, '')
+                                const parts = cleaned.split('.')
+                                let formatted = parts[0] || ''
+                                if (parts.length > 1) {
+                                  formatted +=
+                                    '.' +
+                                    parts.slice(1).join('').substring(0, 3)
+                                }
+                                setAlturaDisplay(formatted)
+                                const value = formatted
+                                  ? Number.parseFloat(formatted)
+                                  : 0
+                                setFormData({
+                                  ...formData,
+                                  alturaCm: Number.isNaN(value) ? 0 : value,
+                                })
+                              }}
+                              keyboardType="decimal-pad"
+                            />
+                          </View>
+                          <View className="flex-1">
+                            <Text className="text-system-text text-xs mb-1">
+                              Largura
+                            </Text>
+                            <TextInput
+                              className="bg-inputbg border border-gray-200 rounded-xl px-4 py-3 text-base"
+                              placeholder="0.00"
+                              value={larguraDisplay}
+                              onChangeText={(text) => {
+                                const cleaned = text.replace(/[^0-9.]/g, '')
+                                const parts = cleaned.split('.')
+                                let formatted = parts[0] || ''
+                                if (parts.length > 1) {
+                                  formatted +=
+                                    '.' +
+                                    parts.slice(1).join('').substring(0, 3)
+                                }
+                                setLarguraDisplay(formatted)
+                                const value = formatted
+                                  ? Number.parseFloat(formatted)
+                                  : 0
+                                setFormData({
+                                  ...formData,
+                                  larguraCm: Number.isNaN(value) ? 0 : value,
+                                })
+                              }}
+                              keyboardType="decimal-pad"
+                            />
+                          </View>
+                          <View className="flex-1">
+                            <Text className="text-system-text text-xs mb-1">
+                              Profundidade
+                            </Text>
+                            <TextInput
+                              className="bg-inputbg border border-gray-200 rounded-xl px-4 py-3 text-base"
+                              placeholder="0.00"
+                              value={profundidadeDisplay}
+                              onChangeText={(text) => {
+                                const cleaned = text.replace(/[^0-9.]/g, '')
+                                const parts = cleaned.split('.')
+                                let formatted = parts[0] || ''
+                                if (parts.length > 1) {
+                                  formatted +=
+                                    '.' +
+                                    parts.slice(1).join('').substring(0, 3)
+                                }
+                                setProfundidadeDisplay(formatted)
+                                const value = formatted
+                                  ? Number.parseFloat(formatted)
+                                  : 0
+                                setFormData({
+                                  ...formData,
+                                  profundidadeCm: Number.isNaN(value) ? 0 : value,
+                                })
+                              }}
+                              keyboardType="decimal-pad"
+                            />
+                          </View>
+                        </View>
+                      </View>
+
+                      <View className="mb-4">
+                        <Text className="text-frg900 font-medium mb-2">Tags</Text>
+                        <TextInput
+                          className="bg-inputbg border border-gray-200 rounded-xl px-4 py-3 text-base"
+                          placeholder="tag1, tag2, tag3"
+                          value={formData.tags || ''}
+                          onChangeText={(text) =>
+                            setFormData({
+                              ...formData,
+                              tags: text || undefined,
+                            })
+                          }
+                        />
+                        <Text className="text-system-text text-xs mt-1">
+                          Separe as tags por vírgula
+                        </Text>
+                      </View>
+
                       <TouchableOpacity
                         className="flex-row items-center mb-4"
                         onPress={() =>
@@ -895,6 +1199,33 @@ export default function SellerProductsScreen() {
                           )}
                         </View>
                         <Text className="text-frg900">Produto ativo</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        className="flex-row items-center mb-4"
+                        onPress={() =>
+                          setFormData({
+                            ...formData,
+                            destaque: !formData.destaque,
+                          })
+                        }
+                      >
+                        <View
+                          className={`w-6 h-6 rounded border-2 mr-3 items-center justify-center ${
+                            formData.destaque
+                              ? 'bg-frgprimary border-frgprimary'
+                              : 'border-gray-300'
+                          }`}
+                        >
+                          {formData.destaque && (
+                            <Ionicons
+                              name="checkmark"
+                              size={16}
+                              color="white"
+                            />
+                          )}
+                        </View>
+                        <Text className="text-frg900">Produto em destaque</Text>
                       </TouchableOpacity>
                     </View>
 
@@ -928,16 +1259,53 @@ export default function SellerProductsScreen() {
                     )}
 
                     <TouchableOpacity
-                      className="bg-frgprimary rounded-xl py-4 mb-6"
+                      className={`bg-frgprimary rounded-xl py-4 mb-6 ${
+                        updateProductMutation.isPending ? 'opacity-70' : ''
+                      }`}
                       onPress={() => {
-                        Alert.alert(
-                          'Info',
-                          'Funcionalidade de atualização em desenvolvimento',
-                        )
+                        if (!formData.nome) {
+                          Alert.alert('Erro', 'O nome do produto é obrigatório.')
+                          return
+                        }
+                        if (!formData.sku) {
+                          Alert.alert('Erro', 'O SKU é obrigatório.')
+                          return
+                        }
+                        if (!formData.categoriaId) {
+                          Alert.alert('Erro', 'Selecione uma categoria.')
+                          return
+                        }
+                        if (!formData.descricaoCurta) {
+                          Alert.alert('Erro', 'A descrição curta é obrigatória.')
+                          return
+                        }
+                        if (!formData.preco || formData.preco <= 0) {
+                          Alert.alert('Erro', 'O preço deve ser maior que zero.')
+                          return
+                        }
+                        if (formData.estoque === undefined || formData.estoque < 0) {
+                          Alert.alert('Erro', 'O estoque não pode ser negativo.')
+                          return
+                        }
+                        if (
+                          formData.estoqueMinimo === undefined ||
+                          formData.estoqueMinimo < 0
+                        ) {
+                          Alert.alert(
+                            'Erro',
+                            'O estoque mínimo não pode ser negativo.',
+                          )
+                          return
+                        }
+
+                        updateProductMutation.mutate(formData)
                       }}
+                      disabled={updateProductMutation.isPending}
                     >
                       <Text className="text-white text-center text-lg font-semibold">
-                        Salvar Alterações
+                        {updateProductMutation.isPending
+                          ? 'Salvando...'
+                          : 'Salvar Alterações'}
                       </Text>
                     </TouchableOpacity>
                   </View>

@@ -12,7 +12,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons'
-import { router, useFocusEffect } from 'expo-router'
+import { router } from 'expo-router'
 import PagerView from 'react-native-pager-view'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import Toast from 'react-native-toast-message'
@@ -37,6 +37,8 @@ import { useBackHandler } from '@/hooks/indext'
 import { useCart } from '@/contexts/CartContext'
 import { registerForPushNotificationsAsync } from '@/notifications'
 import { updateToken } from '@/services/auth'
+import * as Notifications from 'expo-notifications'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
 interface ProductImageProps {
   readonly produtoId: string
@@ -298,7 +300,11 @@ function SellerProductsDashboard() {
           </View>
 
           {/* Card de Total de Pedidos */}
-          <View className="w-1/2 px-2 mb-4">
+          <TouchableOpacity
+            className="w-1/2 px-2 mb-4"
+            activeOpacity={0.9}
+            onPress={() => router.push('/profile/orders')}
+          >
             <View className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
               <View className="flex-row items-center mb-2">
                 <View className="bg-orange-100 rounded-full p-2 mr-2">
@@ -314,7 +320,7 @@ function SellerProductsDashboard() {
               </View>
               <Text className="text-system-text text-sm">Total de Pedidos</Text>
             </View>
-          </View>
+          </TouchableOpacity>
         </View>
 
         {!hasStoreLocation && (
@@ -500,6 +506,7 @@ export default function HomeScreen() {
     null,
   )
   const [pushToken, setPushToken] = useState('')
+  const notificationRequestedRef = useRef(false)
   const pagerRef = useRef<PagerView>(null)
   const queryClient = useQueryClient()
   const { setProfile, profile } = useCustomerStore()
@@ -600,22 +607,74 @@ export default function HomeScreen() {
     mutationFn: updateToken,
   })
 
-  const updateTokenFn = useCallback(() => {
-    if (userId && profile && !profile?.pushToken && !pushToken) {
-      registerForPushNotificationsAsync(setPushToken, (token) => {
+  const updateTokenFn = useCallback(async () => {
+    if (notificationRequestedRef.current) {
+      return
+    }
+
+    if (!userId || !profile || profile?.pushToken || pushToken) {
+      return
+    }
+
+    const permissionDenied = await AsyncStorage.getItem(
+      '@evortex:notification_permission_denied',
+    )
+
+    if (permissionDenied === 'true') {
+      return
+    }
+
+    notificationRequestedRef.current = true
+
+    try {
+      const { status } = await Notifications.getPermissionsAsync()
+
+      if (status === 'denied') {
+        await AsyncStorage.setItem(
+          '@evortex:notification_permission_denied',
+          'true',
+        )
+        notificationRequestedRef.current = false
+        return
+      }
+
+      if (status === 'granted') {
+        const pushTokenData = await Notifications.getExpoPushTokenAsync()
+        if (pushTokenData?.data) {
+          setPushToken(pushTokenData.data)
+          updateTokenMutation.mutate(pushTokenData.data)
+          setProfile({ ...profile, pushToken: pushTokenData.data })
+        }
+        notificationRequestedRef.current = false
+        return
+      }
+
+      registerForPushNotificationsAsync(setPushToken, async (token) => {
         if (token) {
           updateTokenMutation.mutate(token)
           setProfile({ ...profile, pushToken: token })
+        } else {
+          const { status: newStatus } =
+            await Notifications.getPermissionsAsync()
+          if (newStatus === 'denied') {
+            await AsyncStorage.setItem(
+              '@evortex:notification_permission_denied',
+              'true',
+            )
+          }
         }
+        notificationRequestedRef.current = false
       })
+    } catch (error) {
+      console.error('Erro ao verificar permissão de notificações:', error)
+      notificationRequestedRef.current = false
     }
   }, [pushToken, updateTokenMutation, userId, profile, setProfile])
 
-  useFocusEffect(
-    useCallback(() => {
-      updateTokenFn()
-    }, [updateTokenFn]),
-  )
+  useEffect(() => {
+    notificationRequestedRef.current = false
+    updateTokenFn()
+  }, [userId, profile?.id, updateTokenFn])
 
   useEffect(() => {
     if (customerProfile) setProfile(customerProfile)
@@ -690,11 +749,6 @@ export default function HomeScreen() {
       quantidade: qtd || 1,
       variacaoId: variacaoId || undefined,
     })
-    Toast.show({
-      type: 'success',
-      text1: 'Sucesso',
-      text2: 'Produto adicionado ao carrinho!',
-    })
   }
 
   const handleViewProduct = (produtoId: string) => {
@@ -728,8 +782,6 @@ export default function HomeScreen() {
     }
     return false
   })
-
-  console.log(produtoDetalhe)
 
   const renderProduct = ({ item }: { item: ProdutoRes }) => {
     const isFavorite = favoritosIds.has(item.id)
@@ -947,17 +999,13 @@ export default function HomeScreen() {
                   <Text className="text-frg900 font-bold text-lg">
                     {produtosData?.total || 0} Produtos
                   </Text>
-                  <TouchableOpacity onPress={() => router.push('/products')}>
-                    <Text className="text-frgprimary font-medium">
-                      Ver todos
-                    </Text>
-                  </TouchableOpacity>
                 </View>
                 {(() => {
                   if (isLoadingProdutos) {
                     return (
-                      <View className="items-center py-8">
-                        <Text className="text-system-text">
+                      <View className="items-center justify-center py-12">
+                        <ActivityIndicator size="large" color="#437C99" />
+                        <Text className="text-system-text mt-4">
                           Carregando produtos...
                         </Text>
                       </View>
@@ -997,7 +1045,10 @@ export default function HomeScreen() {
               if (isLoadingDetalhe) {
                 return (
                   <View className="flex-1 items-center justify-center">
-                    <Text className="text-system-text">Carregando...</Text>
+                    <ActivityIndicator size="large" color="#437C99" />
+                    <Text className="text-system-text mt-4">
+                      Carregando produto...
+                    </Text>
                   </View>
                 )
               }
